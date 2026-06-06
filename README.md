@@ -50,4 +50,12 @@ Open http://localhost:5173
 - **Database:** SQLite (dev) → PostgreSQL (production)
 - **Auth:** JWT with token blacklisting on logout
 
+## 🚀 Future Enhancements
+
+### 🔐 Security & Authentication
+- Role-based access control (RBAC) with granular permissions
+- Two-factor authentication (2FA)
+- OAuth2 / Social login (Google, Microsoft, GitHub)
+- Audit logs for user activity
+
 # Group-Circus-Swahilipot-hub-foundation
