@@ -58,4 +58,10 @@ Open http://localhost:5173
 - OAuth2 / Social login (Google, Microsoft, GitHub)
 - Audit logs for user activity
 
+### 📂 Documentation
+- API documentation with Swagger / Postman collections
+- Developer onboarding guide
+- Contribution guidelines & code of conduct
+
+  
 # Group-Circus-Swahilipot-hub-foundation
