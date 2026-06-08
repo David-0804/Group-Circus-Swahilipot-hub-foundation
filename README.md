@@ -1,4 +1,4 @@
-# Swahilipot hub  — Management System
+# Swahilipot hub Foundation  — Management System
 
 Full-stack web application built with React 18 (frontend) and Django 6 REST Framework (backend).
 
