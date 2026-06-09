@@ -11,7 +11,7 @@ cd backend
 pip install django djangorestframework djangorestframework-simplejwt django-cors-headers Pillow python-decouple qrcode reportlab bleach
 python manage.py migrate
 python seed.py          # loads demo data
-python manage.py runserver
+python manage.py runserver #To start server
 ```
 
 ### Frontend
