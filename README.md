@@ -1,4 +1,4 @@
-# Swahilipot hub  — Management System
+# Swahilipot hub Foundation  — Management System
 
 Full-stack web application built with React 18 (frontend) and Django 6 REST Framework (backend).
 
@@ -9,9 +9,9 @@ Full-stack web application built with React 18 (frontend) and Django 6 REST Fram
 ```bash
 cd backend
 pip install django djangorestframework djangorestframework-simplejwt django-cors-headers Pillow python-decouple qrcode reportlab bleach
-python manage.py migrate
+python manage.py migrate # Migrate the database models
 python seed.py          # loads demo data
-python manage.py runserver
+python manage.py runserver # To start server
 ```
 
 ### Frontend
