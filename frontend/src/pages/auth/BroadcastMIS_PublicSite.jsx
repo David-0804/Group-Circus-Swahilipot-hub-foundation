@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import { useNavigate } from 'react-router-dom';
 
 
 /* ─────────────────── DESIGN TOKENS ─────────────────── */
 const T = {
-  navy: "#0A1628",
+  navy: "#0a2854",
   navyMid: "#12233E",
-  navyLight: "#1A3A5C",
+  navyLight: "#b30c7b",
   gold: "#C9973A",
   goldLight: "#E8B84B",
   goldPale: "#FFF8E7",
@@ -22,13 +22,13 @@ const T = {
 };
 
 /* ─────────────────── DATA ─────────────────── */
-const NAV_SECTIONS = ["Home", "About",/*"Programmes"*/, "Studios", "News", "FM Live", "Admissions",/*"Alumni"*/, "Contact"];
+const NAV_SECTIONS = ["Home", "About", /*"Programmes",*/ "Studios", "News", "FM Live", "Programs", "Impacts", "Contact"];
 
 const STATS = [
-  { value: "98.4", unit: "FM", label: "Licensed Broadcast Station" },
-  { value: "24/7", unit: "", label: "On-Air Operations" },
-  { value: "1,400+", unit: "", label: "Media Alumni" },
-  { value: "Est.", unit: "2001", label: "Years of Excellence" },
+  { value: "91.7", unit: "FM", label: "Swahilipot FM" },
+  { value: "10,000+", unit: "", label: "Youth Empowered" },
+  { value: "150+", unit: "", label: "Startups Supported" },
+  { value: "2016", unit: "", label: "Founded" },
 ];
 
 const PROGRAMMES = [
@@ -113,34 +113,224 @@ const FACILITIES = [
   { name: "Events & Makers Space", desc: "A multifunctional venue for exhibitions, product showcases, entrepreneurship events, creative performances, and youth forums.", icon: "🎤", area: "Community Centre" },
 ];
 
-const ALUMNI = [
-  { name: "Amina Hassan", role: "News Anchor, KBC", year: "2018", programme: "Journalism", quote: "The live newsroom experience during training was indistinguishable from a professional environment. I walked into my first job already knowing the workflow." },
-  { name: "Brian Otieno", role: "Head of Production, Citizen TV", year: "2015", programme: "Video Production", quote: "I attribute my entire career to the hands-on discipline instilled here. The 4-camera studio training was better than what I found at my first three employers." },
-  { name: "Zara Mohamed", role: "Founder, Sahel Podcast Network", year: "2020", programme: "Radio Broadcasting", quote: "The FM station experience is the single biggest differentiator. I launched my podcast company two years after graduating because I actually knew how broadcasting worked end to end." },
-  { name: "David Kariuki", role: "Sound Engineer, Universal Music EA", year: "2019", programme: "Audio Engineering", quote: "Recording on the Neve console during my training — you simply can't replicate that learning. My portfolio from here got me the Universal Music interview." },
-  { name: "Fatuma Abdi", role: "Digital Editor, Nation Media Group", year: "2021", programme: "Journalism", quote: "The digital newsroom and wire service integration made me job-ready. Nation Media Group hired me within three weeks of graduation." },
+/* ─────────────────── IMPACTS & SUCCESS STORIES DATA ─────────────────── */
+const SUCCESS_STORIES = [
+  { name: "Maria Kimani", role: "Tech Entrepreneur", programme: "Tech Incubation", title: "Maria's Tech Journey", quote: "Swahilipot Hub gave me the skills and confidence to start my own tech company. Today, I employ five other youths from my community." },
+  { name: "James Odhiambo", role: "Visual Artist", programme: "Arts Programme", title: "James' Art Collective", quote: "The arts program at Swahilipot helped me find my voice. Our collective now showcases East African art internationally." },
+  { name: "Joan Otieno", role: "Travel Entrepreneur", programme: "Mentorship Programme", title: "Joan's Coastal Ventures", quote: "My life's passion is offering unique travel experiences to local and international tourists who visit Mombasa — Swahilipot mentorship helped me turn that passion into a business." },
+  { name: "Nancy Moraa", role: "Communications, Swahilipot Hub", programme: "Mentorship Programme", title: "From Mentee to the Team", quote: "When you are given the opportunity to nurture your talent and grow yourself, do not relent. Continuous nurturing and mentorship gave me a strong base for my future." },
 ];
 
-const SCHEDULE_ITEMS = [
-  { time: "06:00", show: "Morning Drive", presenter: "Studio Team", type: "music", live: false },
-  { time: "07:00", show: "Coast Breakfast Show", presenter: "Students — Live", type: "live", live: true },
-  { time: "09:00", show: "Mid-Morning Magazine", presenter: "Students — Live", type: "live", live: true },
-  { time: "11:00", show: "Music Block", presenter: "Automation", type: "music", live: false },
-  { time: "13:00", show: "Lunchtime News", presenter: "Journalism Students", type: "news", live: true },
-  { time: "14:00", show: "Afternoon Drive", presenter: "Students — Live", type: "live", live: true },
-  { time: "16:00", show: "Coast Rush Hour", presenter: "Students — Live", type: "live", live: true },
-  { time: "18:00", show: "Evening News & Analysis", presenter: "Journalism Students", type: "news", live: true },
-  { time: "19:00", show: "Night Mix", presenter: "Students — Rotation", type: "music", live: true },
-  { time: "22:00", show: "Late Night Music", presenter: "Automation", type: "music", live: false },
+const IMPACT_STATS = [
+  { value: "87%", label: "of participants find employment within 6 months" },
+  { value: "90%", label: "of our startups survive beyond 2 years" },
+  { value: "65%", label: "of our members are from underserved communities" },
+  { value: "4.8/5", label: "average satisfaction rating from participants" },
 ];
 
+/*
+ * Per-year impact report data.
+ * The Download button first tries to fetch a real PDF from
+ * /reports/impact-report-<year>.pdf (drop your official PDFs in public/reports/).
+ * If the file isn't found, it generates a PDF from the data below instead,
+ * so the button always gives the user a document.
+ */
+const IMPACT_REPORTS = {
+  2025: {
+    youthReached: "36,000+", hubs: "55 youth hubs", mentors: "114 mentors & case managers",
+    highlights: [
+      "166% increase in formal employment among tracked participants",
+      "85% rise in self-employment, with incomes nearly doubled",
+      "Case management programme passed 10,000 young people across 5 cohorts",
+      "Expansion underway into Nairobi and Kitui counties",
+    ],
+  },
+  2024: {
+    youthReached: "20,000+", hubs: "40 youth hubs", mentors: "90 mentors & case managers",
+    highlights: [
+      "87% of participants found employment within 6 months",
+      "90% of incubated startups survived beyond 2 years",
+      "65% of members drawn from underserved communities",
+      "4.8/5 average satisfaction rating from participants",
+    ],
+  },
+  2023: {
+    youthReached: "8,000+", hubs: "20 youth hubs", mentors: "60 mentors & case managers",
+    highlights: [
+      "Youth Hub Network launched across Mombasa, Kilifi and Kwale",
+      "Case management psychosocial support track introduced",
+      "Hilton Foundation partnership for youth hubs and career pathways began",
+    ],
+  },
+  2022: {
+    youthReached: "4,000+", hubs: "8 youth hubs", mentors: "35 mentors",
+    highlights: [
+      "Over 4,000 members mentored, 65% of them youth",
+      "GOYN Mombasa anchor-partner programmes scaled up",
+      "Mombasa Plastics Prize Incubator supported green innovators",
+    ],
+  },
+  2021: {
+    youthReached: "2,500+", hubs: "4 youth hubs", mentors: "20 mentors",
+    highlights: [
+      "Digital skills and entrepreneurship training expanded post-pandemic",
+      "Creative economy programmes connected artists to paying markets",
+      "Community open days resumed at the Old Town hub",
+    ],
+  },
+};
+
+const REPORT_YEARS = Object.keys(IMPACT_REPORTS).sort((a, b) => b - a);
+
+/* ─────────────────── SWAHILIPOT FM — WEEKLY SCHEDULE ───────────────────
+ * Real Swahilipot FM programme grid. Keyed by JS day index (0=Sunday … 6=Saturday).
+ * A show runs from its start time until the next show on the same day begins.
+ */
+const WEEKDAY_BASE = [
+  { time: "06:00", show: "The Breakfast Club", type: "live" },
+  { time: "10:00", show: "Kick Off", type: "live" },
+  { time: "11:00", show: "Swahilipot Cafe", type: "live" },
+  { time: "14:00", show: "Vibe with Kams in Swahili", type: "live" },
+  { time: "15:00", show: "Swahilipot Drive Show", type: "live" },
+  { time: "19:00", show: "Beyond The Ballot", type: "news" },
+  { time: "21:00", show: "The Night Shift", type: "music" },
+];
+
+const WEEKLY_SCHEDULE = {
+  0: [ // Sunday
+    { time: "11:00", show: "Vibes and Music", type: "music" },
+  ],
+  1: WEEKDAY_BASE, // Monday
+  2: WEEKDAY_BASE, // Tuesday
+  3: WEEKDAY_BASE, // Wednesday
+  4: WEEKDAY_BASE, // Thursday
+  5: [ // Friday — Request Hour replaces Kick Off
+    { time: "06:00", show: "The Breakfast Club", type: "live" },
+    { time: "10:00", show: "Request Hour", type: "live" },
+    { time: "11:00", show: "Swahilipot Cafe", type: "live" },
+    { time: "14:00", show: "Vibe with Kams in Swahili", type: "live" },
+    { time: "15:00", show: "Swahilipot Drive Show", type: "live" },
+    { time: "19:00", show: "Beyond The Ballot", type: "news" },
+    { time: "21:00", show: "The Night Shift", type: "music" },
+  ],
+  6: [ // Saturday
+    { time: "08:00", show: "Mikuki ya Maneno", type: "live" },
+    { time: "10:00", show: "Teenz Connect", type: "live" },
+    { time: "12:00", show: "Swahilipot Aroma", type: "live" },
+    { time: "15:00", show: "Kick Off", type: "live" },
+    { time: "19:00", show: "Saturday Night Wave", type: "music" },
+  ],
+};
+
+const showStartHour = (s) => {
+  const [h, m] = s.time.split(":").map(Number);
+  return h + (m || 0) / 60;
+};
+
+/** Returns { current, next } for the given moment based on the real weekly grid. */
+function getNowPlaying(now = new Date()) {
+  const shows = WEEKLY_SCHEDULE[now.getDay()] || [];
+  const hour = now.getHours() + now.getMinutes() / 60;
+  let current = null;
+  let next = null;
+  for (const s of shows) {
+    if (showStartHour(s) <= hour) current = s;
+    else { next = s; break; }
+  }
+  return { current, next };
+}
+
+/** True if `s` is the show airing right now on the given day. */
+function isShowOnNow(s, day, now = new Date()) {
+  if (day !== now.getDay()) return false;
+  const { current } = getNowPlaying(now);
+  return !!current && current.show === s.show && current.time === s.time;
+}
+
+/* ─────────────────── SHARED RADIO STORE ───────────────────
+ * One audio element + one state shared by EVERY Live button on the page
+ * (hero widget, FM page widgets, floating badge). Press play anywhere and
+ * all of them switch to ON AIR together; stop anywhere and all show OFF AIR.
+ */
+const STREAM_URL = "https://swahilipotfm.out.airtime.pro:8000/swahilipotfm_b";
+
+const radioStore = {
+  state: { onAir: false, elapsed: 0, listeners: 3840 },
+  subs: new Set(),
+  audio: null,
+  timer: null,
+
+  emit(patch) {
+    this.state = { ...this.state, ...patch };
+    this.subs.forEach((fn) => fn());
+  },
+
+  getAudio() {
+    if (!this.audio && typeof window !== "undefined") {
+      this.audio = new window.Audio(STREAM_URL);
+      this.audio.preload = "none";
+      this.audio.addEventListener("playing", () => this.emit({ onAir: true }));
+      this.audio.addEventListener("pause", () => this.emit({ onAir: false, elapsed: 0 }));
+      this.audio.addEventListener("error", () => this.emit({ onAir: false }));
+    }
+    return this.audio;
+  },
+
+  async toggle() {
+    const a = this.getAudio();
+    if (!a) return;
+    try {
+      if (this.state.onAir) {
+        a.pause();
+        a.currentTime = 0;
+      } else {
+        await a.play();
+      }
+    } catch (err) {
+      console.log("Playback error:", err);
+      this.emit({ onAir: false });
+    }
+  },
+
+  subscribe(fn) {
+    this.subs.add(fn);
+    if (!this.timer) {
+      this.timer = setInterval(() => {
+        this.emit({
+          elapsed: this.state.onAir ? this.state.elapsed + 1 : 0,
+          listeners: this.state.listeners + Math.floor(Math.random() * 7) - 3,
+        });
+      }, 1000);
+    }
+    return () => {
+      this.subs.delete(fn);
+      if (this.subs.size === 0 && this.timer) { clearInterval(this.timer); this.timer = null; }
+    };
+  },
+
+  getSnapshot() { return this.state; },
+};
+
+/** Hook: every component using this sees the SAME radio state. */
+function useRadio() {
+  const state = useSyncExternalStore(
+    (fn) => radioStore.subscribe(fn),
+    () => radioStore.getSnapshot(),
+    () => radioStore.getSnapshot(),
+  );
+  return { ...state, toggle: () => radioStore.toggle() };
+}
+
+/*
+ * Swahilipot Hub leadership & team — names documented in public sources
+ * (swahilipothub.co.ke and partner publications). Verify titles against the
+ * official Board Members page and add/adjust entries there as needed.
+ */
 const TEAM = [
-  { name: "Prof. Mwangi Kamau", role: "Principal", dept: "Leadership" },
-  { name: "Dr. Aisha Salim", role: "Head of Broadcasting", dept: "Faculty" },
-  { name: "Mr. James Odhiambo", role: "Head of Journalism", dept: "Faculty" },
-  { name: "Ms. Fatima Noor", role: "Head of Video Production", dept: "Faculty" },
-  { name: "Mr. Rashid Bakari", role: "Chief Engineer", dept: "Technical" },
-  { name: "Ms. Priya Mehta", role: "Registrar & Admissions", dept: "Administration" },
+  { name: "Mahmoud Noor", role: "Founder & Chief Mentor (Mentor 001)", dept: "Leadership" },
+  { name: "Hillary Mutuma", role: "Case Management Lead", dept: "Programs" },
+  { name: "Zuhra Shariff", role: "Human Resources", dept: "Administration" },
+  { name: "Nancy Moraa", role: "Communications & Corporate Affairs", dept: "Communications" },
 ];
 
 /* ─────────────────── HOOKS ─────────────────── */
@@ -169,6 +359,157 @@ function FadeIn({ children, delay = 0, y = 24, className = "", style = {} }) {
   );
 }
 
+/* ─────────────────── PDF REPORT DOWNLOAD HELPERS ─────────────────── */
+/** Loads jsPDF from CDN once and caches it on window. */
+function loadJsPDF() {
+  return new Promise((resolve, reject) => {
+    if (window.jspdf && window.jspdf.jsPDF) return resolve(window.jspdf.jsPDF);
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    s.onload = () => (window.jspdf && window.jspdf.jsPDF) ? resolve(window.jspdf.jsPDF) : reject(new Error("jsPDF failed to initialise"));
+    s.onerror = () => reject(new Error("Could not load PDF library"));
+    document.head.appendChild(s);
+  });
+}
+
+function triggerBlobDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+/** Builds a branded PDF for the given year from IMPACT_REPORTS data. */
+async function generateImpactPdf(year) {
+  const jsPDF = await loadJsPDF();
+  const data = IMPACT_REPORTS[year];
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+  const M = 56; // margin
+  let y = 0;
+
+  // Header band
+  doc.setFillColor(10, 22, 40); // navy
+  doc.rect(0, 0, W, 150, "F");
+  doc.setFillColor(201, 151, 58); // gold rule
+  doc.rect(0, 150, W, 4, "F");
+
+  doc.setTextColor(201, 151, 58);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("SWAHILIPOT HUB FOUNDATION  ·  MOMBASA, KENYA", M, 52);
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(30);
+  doc.text(`Impact Report ${year}`, M, 96);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.setTextColor(220, 220, 220);
+  doc.text("Empowering youth through technology, arts & entrepreneurship", M, 122);
+
+  y = 196;
+
+  // Key figures
+  doc.setTextColor(201, 151, 58);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("BY THE NUMBERS", M, y);
+  y += 22;
+
+  const figures = [
+    ["Youth reached", data.youthReached],
+    ["Network", data.hubs],
+    ["Support team", data.mentors],
+  ];
+  doc.setFontSize(12);
+  figures.forEach(([label, val]) => {
+    doc.setTextColor(26, 26, 26);
+    doc.setFont("helvetica", "bold");
+    doc.text(String(val), M, y);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(110, 110, 110);
+    doc.text(`  —  ${label}`, M + doc.getTextWidth(String(val)), y);
+    y += 22;
+  });
+
+  y += 18;
+
+  // Highlights
+  doc.setTextColor(201, 151, 58);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("HIGHLIGHTS OF THE YEAR", M, y);
+  y += 22;
+
+  doc.setFontSize(12);
+  data.highlights.forEach((h) => {
+    doc.setTextColor(201, 151, 58);
+    doc.text("•", M, y);
+    doc.setTextColor(26, 26, 26);
+    doc.setFont("helvetica", "normal");
+    const lines = doc.splitTextToSize(h, W - M * 2 - 16);
+    doc.text(lines, M + 16, y);
+    y += lines.length * 16 + 8;
+  });
+
+  y += 18;
+
+  // Standing impact metrics
+  doc.setTextColor(201, 151, 58);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("PROGRAMME OUTCOMES", M, y);
+  y += 22;
+  doc.setFontSize(12);
+  IMPACT_STATS.forEach((s) => {
+    doc.setTextColor(26, 26, 26);
+    doc.setFont("helvetica", "bold");
+    doc.text(s.value, M, y);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(110, 110, 110);
+    const lines = doc.splitTextToSize(s.label, W - M * 2 - 70);
+    doc.text(lines, M + 64, y);
+    y += Math.max(lines.length * 16, 16) + 8;
+  });
+
+  // Footer
+  const H = doc.internal.pageSize.getHeight();
+  doc.setDrawColor(201, 151, 58);
+  doc.setLineWidth(1);
+  doc.line(M, H - 70, W - M, H - 70);
+  doc.setFontSize(9);
+  doc.setTextColor(130, 130, 130);
+  doc.text("Swahilipot Hub Foundation · Swahili Cultural Centre, Old Town, Mombasa · info@swahilipothub.co.ke", M, H - 50);
+  doc.text(`Generated ${new Date().toLocaleDateString("en-KE")} · swahilipothub.co.ke`, M, H - 36);
+
+  doc.save(`Swahilipot-Impact-Report-${year}.pdf`);
+}
+
+/**
+ * Tries to fetch the official PDF for a year from /reports/impact-report-<year>.pdf.
+ * Falls back to generating one from IMPACT_REPORTS data if it doesn't exist.
+ */
+async function downloadImpactReport(year) {
+  try {
+    const res = await fetch(`/reports/impact-report-${year}.pdf`);
+    const type = (res.headers.get("content-type") || "").toLowerCase();
+    if (res.ok && type.includes("pdf")) {
+      const blob = await res.blob();
+      triggerBlobDownload(blob, `Swahilipot-Impact-Report-${year}.pdf`);
+      return "server";
+    }
+    throw new Error("No server PDF");
+  } catch {
+    await generateImpactPdf(year);
+    return "generated";
+  }
+}
+
 /* ─────────────────── GLOBAL STYLES ─────────────────── */
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -185,6 +526,7 @@ const GLOBAL_CSS = `
     transition: background 0.2s, transform 0.15s; text-decoration: none;
   }
   .btn-primary:hover { background: ${T.goldLight}; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.6; cursor: wait; transform: none; }
   .btn-navy {
     display: inline-block; background: ${T.navy}; color: #fff; padding: 13px 28px;
     border: none; cursor: pointer; font-size: 14px; font-family: 'DM Sans', sans-serif;
@@ -308,29 +650,18 @@ const GLOBAL_CSS = `
 `;
 /* ─────────────────── FM Live Widget ──────────────────── */
 function FMLiveWidget({ compact = false }) {
-  const [onAir, setOnAir] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [listeners, setListeners] = useState(3840);
+  const { onAir, elapsed, listeners, toggle } = useRadio();
 
-  const audioRef = useRef(null);
-
-  const now = new Date();
-  const hour = now.getHours();
-
-  const currentShow =
-    SCHEDULE_ITEMS.find((s) => {
-      const h = parseInt(s.time.split(":")[0]);
-      return h <= hour;
-    }) || SCHEDULE_ITEMS[0];
-
+  // Re-check the schedule every 30s so the show name flips over on time
+  const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const t = setInterval(() => {
-      setElapsed((e) => e + 1);
-      setListeners((l) => l + Math.floor(Math.random() * 7) - 3);
-    }, 1000);
-
+    const t = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(t);
   }, []);
+
+  const { current, next } = getNowPlaying(now);
+  const showName = current ? current.show : next ? `Up Next: ${next.show} (${next.time})` : "Music & Replays";
+  const showSub = current ? `Live on Swahilipot FM` : next ? "Station resumes shortly" : "Swahilipot FM";
 
   const fmt = (s) =>
     `${Math.floor(s / 3600)
@@ -338,23 +669,6 @@ function FMLiveWidget({ compact = false }) {
       .padStart(2, "0")}:${Math.floor((s % 3600) / 60)
         .toString()
         .padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
-
-  const toggleRadio = async () => {
-    if (!audioRef.current) return;
-
-    try {
-      if (onAir) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        setOnAir(false);
-      } else {
-        await audioRef.current.play();
-        setOnAir(true);
-      }
-    } catch (err) {
-      console.log("Playback error:", err);
-    }
-  };
 
   if (compact)
     return (
@@ -389,150 +703,130 @@ function FMLiveWidget({ compact = false }) {
             letterSpacing: "0.15em",
           }}
         >
-          {onAir ? "LIVE · SWAHILIPOT FM" : "OFF AIR"}
+          {onAir ? "ON AIR · SWAHILIPOT FM" : "OFF AIR"}
         </span>
 
         <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, flex: 1 }}>
-          {currentShow.show}
+          {showName}
         </span>
 
-        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11 }}>
-          {listeners.toLocaleString()} listeners
-        </span>
+        <button
+          onClick={toggle}
+          style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}
+        >
+          {onAir ? "⏸ Stop" : "▶ Play"}
+        </button>
       </div>
     );
 
   return (
-    <>
-      {/* 🔥 REAL AUDIO STREAM (NO POPUP, NO IFRAME) */}
-      <audio
-        ref={audioRef}
-        src="https://swahilipotfm.out.airtime.pro:8000/swahilipotfm_b"
-        preload="none"
-        onPlay={() => setOnAir(true)}
-        onPause={() => setOnAir(false)}
-      />
-
+    <div
+      style={{
+        background: onAir ? T.navy : "#1a0a0a",
+        borderRadius: 0,
+        overflow: "hidden",
+      }}
+    >
       <div
         style={{
-          background: onAir ? T.navy : "#1a0a0a",
-          borderRadius: 0,
-          overflow: "hidden",
+          background: onAir ? T.green : T.red,
+          padding: "6px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
         }}
       >
         <div
+          className={onAir ? "on-air-pulse" : ""}
           style={{
-            background: onAir ? T.green : T.red,
-            padding: "6px 20px",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: "#fff",
+          }}
+        />
+
+        <span
+          style={{
+            color: "#fff",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.2em",
           }}
         >
-          <div
-            className={onAir ? "on-air-pulse" : ""}
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: "#fff",
-            }}
-          />
+          {onAir ? "ON AIR — SWAHILIPOT FM" : "OFF AIR"}
+        </span>
 
-          <span
-            style={{
-              color: "#fff",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.2em",
-            }}
-          >
-            {onAir ? "ON AIR — SWAHILIPOT FM" : "OFF AIR"}
-          </span>
+        <span
+          style={{
+            marginLeft: "auto",
+            color: "rgba(255,255,255,0.7)",
+            fontSize: 11,
+          }}
+        >
+          {fmt(elapsed)}
+        </span>
+      </div>
 
-          <span
-            style={{
-              marginLeft: "auto",
-              color: "rgba(255,255,255,0.7)",
-              fontSize: 11,
-            }}
-          >
-            {fmt(elapsed)}
-          </span>
+      <div style={{ padding: "24px 28px" }}>
+        <div style={{ display: "flex", gap: 16, alignItems: "flex-end", marginBottom: 20, height: 40 }}>
+          {[0.5, 0.8, 1, 0.6, 0.9, 0.4, 0.7, 1, 0.5, 0.6, 0.8, 0.3].map((h, i) => (
+            <div
+              key={i}
+              className="audio-bar"
+              style={{
+                height: onAir ? `${h * 40}px` : "4px",
+                animationDuration: `${0.4 + i * 0.1}s`,
+                background: onAir ? T.green : "#333",
+              }}
+            />
+          ))}
         </div>
 
-        <div style={{ padding: "24px 28px" }}>
-          <div style={{ display: "flex", gap: 16, alignItems: "flex-end", marginBottom: 20, height: 40 }}>
-            {[0.5, 0.8, 1, 0.6, 0.9, 0.4, 0.7, 1, 0.5, 0.6, 0.8, 0.3].map((h, i) => (
-              <div
-                key={i}
-                className="audio-bar"
-                style={{
-                  height: onAir ? `${h * 40}px` : "4px",
-                  animationDuration: `${0.4 + i * 0.1}s`,
-                  background: onAir ? T.green : "#333",
-                }}
-              />
-            ))}
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-            <div>
-              <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
-                Now Playing
-              </div>
-
-              <div style={{ color: "#fff", fontSize: 20, fontFamily: "'Playfair Display',serif" }}>
-                {currentShow.show}
-              </div>
-
-              <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>
-                {currentShow.presenter}
-              </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+          <div>
+            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
+              Now Playing
             </div>
 
-            <div style={{ textAlign: "right" }}>
-              <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
-                Listeners
-              </div>
+            <div style={{ color: "#fff", fontSize: 20, fontFamily: "'Playfair Display',serif" }}>
+              {showName}
+            </div>
 
-              <div style={{ color: T.gold, fontSize: 24, fontWeight: 700 }}>
-                {listeners.toLocaleString()}
-              </div>
+            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>
+              {showSub}
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
-            <button
-              className="btn-outline-white"
-              style={{ padding: "8px 16px", fontSize: 12 }}
-              onClick={toggleRadio}
-            >
-              {onAir ? "⏸ Stop Live" : "▶ Listen Live"}
-            </button>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
+              Listeners
+            </div>
 
-            <button
-              onClick={() => setOnAir((a) => !a)}
-              style={{
-                background: "transparent",
-                border: "1.5px solid rgba(255,255,255,0.15)",
-                color: "rgba(255,255,255,0.5)",
-                padding: "8px 16px",
-                fontSize: 12,
-              }}
-            >
-              {onAir ? "Simulate Off Air" : "Restore Signal"}
-            </button>
+            <div style={{ color: T.gold, fontSize: 24, fontWeight: 700 }}>
+              {listeners.toLocaleString()}
+            </div>
           </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+          <button
+            className="btn-outline-white"
+            style={{ padding: "8px 16px", fontSize: 12 }}
+            onClick={toggle}
+          >
+            {onAir ? "⏸ Stop Live" : "▶ Listen Live"}
+          </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 /* ─────────────────── HERO ─────────────────── */
 function HeroSection({ onNav }) {
   const [tick, setTick] = useState(0);
-  const TICKERS = ["September 2026 Intake — Applications Open Now", "98.4 FM Coast — 3,800+ Daily Listeners", "Kenya Media Awards 2026 — 3 Golds Won by Our Students", "Open Day: Saturday 14 June 2026 — Free Entry", "New Transmitter: FM Coverage Now 120km Radius"];
+  const { onAir } = useRadio();
+  const TICKERS = ["Swahilipot FM — Streaming Live Daily", "Community Open Days — Monday to Saturday, Free Entry", "36,000+ Youth Reached Across the Coast Region", "New Programs in Tech, Arts & Entrepreneurship — Apply Now", "Community Innovation Day — 14 June 2026"];
   useEffect(() => { const t = setInterval(() => setTick(x => (x + 1) % TICKERS.length), 5000); return () => clearInterval(t); }, []);
 
   return (
@@ -560,10 +854,10 @@ function HeroSection({ onNav }) {
           <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.05)", border: `1px solid rgba(201,151,58,0.25)`, padding: "6px 16px 6px 8px", marginBottom: 32 }}>
             <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 14 }}>
               {[0.5, 1, 0.7, 0.9, 0.4].map((h, i) => (
-                <div key={i} className="audio-bar" style={{ height: `${h * 14}px`, animationDuration: `${0.5 + i * 0.15}s` }} />
+                <div key={i} className="audio-bar" style={{ height: onAir ? `${h * 14}px` : "3px", animationDuration: `${0.5 + i * 0.15}s`, background: onAir ? T.green : "#666" }} />
               ))}
             </div>
-            <span style={{ color: T.gold, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em" }}>98.4 FM · LIVE NOW</span>
+            <span style={{ color: onAir ? T.gold : "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.15em" }}>SWAHILIPOT FM · {onAir ? "ON AIR" : "OFF AIR"}</span>
           </div>
 
           <h1 className="display" style={{ fontSize: "clamp(40px,5.5vw,80px)", fontWeight: 900, color: "#fff", lineHeight: 1.05, marginBottom: 20 }}>
@@ -575,8 +869,8 @@ function HeroSection({ onNav }) {
             Swahilipot Hub Foundation is a vibrant innovation and creative technology hub in Mombasa that empowers young people through digital skills training, entrepreneurship, innovation, arts, and community-driven programs, while providing a collaborative space where ideas are nurtured into impactful solutions that drive personal growth and positive community transformation.
           </p>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <button className="btn-primary" onClick={() => onNav("admissions")} style={{ fontSize: 14, padding: "15px 32px" }}>Apply for September 2026</button>
-            <button className="btn-outline-white" onClick={() => onNav("programmes")} style={{ fontSize: 14, padding: "15px 32px" }}>View Programmes</button>
+            <button className="btn-primary" onClick={() => onNav("programs")} style={{ fontSize: 14, padding: "15px 32px" }}>Explore Programs</button>
+            <button className="btn-outline-white" onClick={() => onNav("studios")} style={{ fontSize: 14, padding: "15px 32px" }}>Visit Our Spaces</button>
           </div>
           <div style={{ display: "flex", gap: 40, marginTop: 52, paddingTop: 40, borderTop: "1px solid rgba(255,255,255,0.08)", flexWrap: "wrap" }}>
             {STATS.map(s => (
@@ -597,13 +891,12 @@ function HeroSection({ onNav }) {
           <div style={{ marginTop: 16, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", padding: "20px 24px" }}>
             <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Today's Schedule</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {SCHEDULE_ITEMS.slice(0, 5).map((s, i) => {
-                const h = parseInt(s.time.split(":")[0]);
-                const isCurrent = h <= new Date().getHours() && h + 2 > new Date().getHours();
+              {(WEEKLY_SCHEDULE[new Date().getDay()] || []).slice(0, 5).map((s, i, arr) => {
+                const isCurrent = isShowOnNow(s, new Date().getDay());
                 return (
-                  <div key={i} style={{ display: "flex", gap: 12, alignItems: "center", padding: "8px 0", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                  <div key={`${s.time}-${s.show}`} style={{ display: "flex", gap: 12, alignItems: "center", padding: "8px 0", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
                     <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, minWidth: 38, fontVariantNumeric: "tabular-nums" }}>{s.time}</span>
-                    {s.live && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, flexShrink: 0 }} />}
+                    {isCurrent && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, flexShrink: 0 }} />}
                     <span style={{ color: isCurrent ? "#fff" : "rgba(255,255,255,0.5)", fontSize: 13, fontWeight: isCurrent ? 600 : 400, flex: 1 }}>{s.show}</span>
                   </div>
                 );
@@ -683,7 +976,7 @@ function AboutSection() {
         {/* Team */}
         <FadeIn delay={0.1} style={{ marginTop: 80 }}>
           <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 64 }}>
-            <span className="section-eyebrow">Leadership & Faculty</span>
+            <span className="section-eyebrow">Leadership & Team</span>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24, marginTop: 36 }}>
               {TEAM.map(m => (
                 <div key={m.name} className="card-hover" style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "24px 20px", textAlign: "center" }}>
@@ -792,7 +1085,7 @@ function ProgrammesSection() {
 }
 
 /* ─────────────────── STUDIOS / FACILITIES ─────────────────── */
-function StudiosSection() {
+function StudiosSection({ onNav }) {
   const [active, setActive] = useState(0);
   return (
     <section id="studios" style={{ padding: "120px 5%", background: T.offWhite }}>
@@ -835,8 +1128,8 @@ function StudiosSection() {
               <div style={{ background: "#fff", border: `1px solid ${T.border}`, borderTop: "none", padding: "28px 32px" }}>
                 <p style={{ color: T.textMuted, fontSize: 15, lineHeight: 1.8, marginBottom: 24 }}>{FACILITIES[active].desc}</p>
                 <div style={{ display: "flex", gap: 12 }}>
-                  <button className="btn-navy" style={{ fontSize: 12, padding: "10px 20px" }}>Explore Programs</button>
-                  <button className="btn-outline" style={{ fontSize: 12, padding: "10px 20px" }}>View Activities</button>
+                  <button className="btn-navy" style={{ fontSize: 12, padding: "10px 20px" }} onClick={() => onNav("programs")}>Explore Programs</button>
+                  <button className="btn-outline" style={{ fontSize: 12, padding: "10px 20px" }} onClick={() => window.open("https://www.swahilipothub.co.ke/events", "_blank")}>View Activities</button>
                 </div>
               </div>
             </div>
@@ -850,7 +1143,7 @@ function StudiosSection() {
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.15em", color: T.navy, textTransform: "uppercase", marginBottom: 6 }}>Community Open Days: — Monday - Saturday</div>
               <div className="display" style={{ fontSize: 26, fontWeight: 700, color: T.navy }}>Explore Innovation Labs. Meet Creators. Experience Technology in Action.</div>
             </div>
-            <button className="btn-navy" style={{ whiteSpace: "nowrap", padding: "15px 32px" }}>Register Free →</button>
+            <button className="btn-navy" style={{ whiteSpace: "nowrap", padding: "15px 32px" }} onClick={() => onNav("programs")}>Register Free →</button>
           </div>
         </FadeIn>
       </div>
@@ -896,8 +1189,7 @@ function NewsSection() {
                   <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>· {featured.readTime} read</span>
                 </div>
                 <h3 className="display" style={{ fontSize: "clamp(18px,2vw,26px)", fontWeight: 700, color: "#fff", lineHeight: 1.35, marginBottom: 16 }}>{featured.title}</h3>
-                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>{featured.excerpt}</p>
-                <button className="btn-primary" style={{ alignSelf: "flex-start", fontSize: 12, padding: "10px 22px" }}>Read Full Story →</button>
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, lineHeight: 1.8 }}>{featured.excerpt}</p>
               </div>
             </div>
           </FadeIn>
@@ -926,12 +1218,6 @@ function NewsSection() {
             </FadeIn>
           ))}
         </div>
-
-        <FadeIn>
-          <div style={{ textAlign: "center", marginTop: 48 }}>
-            <button className="btn-outline" style={{ padding: "13px 40px" }}>View All News →</button>
-          </div>
-        </FadeIn>
       </div>
     </section>
   );
@@ -950,7 +1236,7 @@ function FMLiveSection() {
         <FadeIn>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 48, flexWrap: "wrap", gap: 16 }}>
             <div>
-              <span className="section-eyebrow">98.4 FM Coast</span>
+              <span className="section-eyebrow">Swahilipot FM</span>
               <h2 className="section-title-white">Live Broadcasting<br /><span className="italic" style={{ color: T.gold }}>& Programme Schedule</span></h2>
             </div>
             <FMLiveWidget compact />
@@ -964,9 +1250,9 @@ function FMLiveSection() {
               <div style={{ marginTop: 20, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", padding: "24px" }}>
                 <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>About Our FM Station</div>
                 <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, lineHeight: 1.8, marginBottom: 16 }}>
-                  98.4 FM Coast is a licensed Category B FM station operated by students of the Broadcast Media Institution under supervision of professional faculty broadcasters. We broadcast 06:00–midnight daily, 365 days a year.
+                  Swahilipot FM is a youth-run community radio station based at the Swahilipot Hub in Old Town, Mombasa. Run by young presenters, producers and journalists from our programs, it amplifies youth voices, community stories and coastal culture — broadcasting daily on air and streaming online.
                 </p>
-                {[["Frequency", "98.4 MHz"], ["Coverage", "120 km radius — Coast Region"], ["Daily listeners", "3,800+ (Ipsos Kenya audit)"], ["Broadcast hours", "18 hours per day"], ["CA Licence", "BC/FM/KE-2001-0048"], ["Format", "Top 40, News, Talk, Student Productions"]].map(([k, v]) => (
+                {[["Station", "Swahilipot FM"], ["Base", "Swahilipot Hub, Old Town, Mombasa"], ["Coverage", "Mombasa & the Coast region + online stream"], ["Run by", "Youth presenters, producers & journalists"], ["Listen", "On air & streaming via swahilipothub.co.ke"], ["Format", "Youth Talk, Music, Community News, Culture"]].map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                     <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>{k}</span>
                     <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: 500 }}>{v}</span>
@@ -985,18 +1271,17 @@ function FMLiveSection() {
                 ))}
               </div>
               <div style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
-                {SCHEDULE_ITEMS.map((s, i) => {
-                  const h = parseInt(s.time.split(":")[0]);
-                  const isNow = h <= new Date().getHours() && h + 2 > new Date().getHours() && day === new Date().getDay();
+                {(WEEKLY_SCHEDULE[day] || []).map((s, i, arr) => {
+                  const isNow = isShowOnNow(s, day);
                   return (
-                    <div key={i} style={{ display: "grid", gridTemplateColumns: "60px 1fr auto", gap: 16, padding: "16px 20px", background: isNow ? "rgba(201,151,58,0.1)" : "transparent", borderBottom: i < SCHEDULE_ITEMS.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none", alignItems: "center" }}>
+                    <div key={`${s.time}-${s.show}`} style={{ display: "grid", gridTemplateColumns: "60px 1fr auto", gap: 16, padding: "16px 20px", background: isNow ? "rgba(201,151,58,0.1)" : "transparent", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none", alignItems: "center" }}>
                       <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontVariantNumeric: "tabular-nums" }}>{s.time}</span>
                       <div>
                         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 3 }}>
                           {isNow && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.green }} />}
                           <span style={{ color: isNow ? "#fff" : "rgba(255,255,255,0.75)", fontSize: 14, fontWeight: isNow ? 600 : 400 }}>{s.show}</span>
                         </div>
-                        <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 12 }}>{s.presenter}</span>
+                        <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 12 }}>Swahilipot FM</span>
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", background: isNow ? "rgba(29,185,84,0.15)" : s.type === "news" ? "rgba(255,200,50,0.1)" : "rgba(255,255,255,0.06)", color: isNow ? T.green : s.type === "news" ? "#FFCC00" : "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                         {isNow ? "LIVE" : s.type}
@@ -1004,20 +1289,35 @@ function FMLiveSection() {
                     </div>
                   );
                 })}
+                {(WEEKLY_SCHEDULE[day] || []).length === 0 && (
+                  <div style={{ padding: "24px 20px", color: "rgba(255,255,255,0.4)", fontSize: 13 }}>No scheduled shows — enjoy our music mix all day.</div>
+                )}
               </div>
             </div>
           </FadeIn>
         </div>
 
-        {/* Presenter recruitment */}
+        {/* Programs / careers CTA — nav "Programs" scrolls here */}
         <FadeIn delay={0.1}>
-          <div style={{ marginTop: 60, background: "rgba(201,151,58,0.08)", border: "1px solid rgba(201,151,58,0.2)", padding: "40px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 24 }}>
+          <div id="programs" style={{ marginTop: 60, scrollMarginTop: 90, background: "rgba(201,151,58,0.08)", border: "1px solid rgba(201,151,58,0.2)", padding: "40px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 24 }}>
             <div>
-              <div style={{ color: T.gold, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8 }}>Student Opportunities</div>
-              <div className="display" style={{ color: "#fff", fontSize: 22, fontWeight: 700 }}>Join the On-Air Team</div>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, marginTop: 8 }}>Current students can apply for presenting slots, news reading, and production roles. Applications reviewed termly.</p>
+              <div style={{ color: T.gold, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8 }}>Programs & Opportunities</div>
+              <div className="display" style={{ color: "#fff", fontSize: 22, fontWeight: 700 }}>Join the Swahilipot Team</div>
+              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, marginTop: 8 }}>  Explore career, internship, and volunteer opportunities at Swahilipot Hub.</p>
+
             </div>
-            <button className="btn-primary" style={{ whiteSpace: "nowrap" }}>Apply to Present</button>
+            <button
+              className="btn-primary"
+              style={{ whiteSpace: "nowrap" }}
+              onClick={() =>
+                window.open(
+                  "https://www.swahilipothub.co.ke/careers",
+                  "_blank"
+                )
+              }
+            >
+              Explore Careers
+            </button>
           </div>
         </FadeIn>
       </div>
@@ -1078,7 +1378,7 @@ function AdmissionsSection() {
                   ["Age Requirement", "Applicants must be 17 years or older at time of enrolment", "✅"],
                   ["Documents Required", "Original KCSE Certificate, National ID/Passport, 2 passport photos, birth certificate", "📋"],
                   ["Application Fee", "KES 1,000 (non-refundable) — waived for early applicants before 31 July", "💳"],
-                  ["HELB Loans", "Eligible for Higher Education Loans Board bursaries and scholarships", "🎓"],
+                  ["Scholarships", "Bursaries and partner-funded scholarships available for eligible youth", "🎓"],
                   ["Medical Requirements", "Medical certificate confirming fitness for studio environments", "🏥"],
                 ].map(([label, val, icon]) => (
                   <div key={label} style={{ display: "flex", gap: 16, padding: "16px 0", borderBottom: `1px solid ${T.border}`, alignItems: "flex-start" }}>
@@ -1101,7 +1401,7 @@ function AdmissionsSection() {
                   </div>
                 ))}
                 <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, marginTop: 16, lineHeight: 1.7 }}>
-                  Fees inclusive of studio time, equipment access, and industry visits. Payment in two or three instalments available. HELB bursary deductions processed directly.
+                  Fees inclusive of studio time, equipment access, and industry visits. Payment in two or three instalments available. Bursary support processed directly for eligible participants.
                 </p>
               </div>
             </div>
@@ -1179,77 +1479,171 @@ function AdmissionsSection() {
   );
 }
 
-/* ─────────────────── ALUMNI ─────────────────── */
-function AlumniSection() {
+/* ─────────────────── IMPACTS & SUCCESS STORIES (replaces Alumni) ─────────────────── */
+function ImpactsSection() {
   const [active, setActive] = useState(0);
+  const [reportYear, setReportYear] = useState(REPORT_YEARS[0]);
+  const [dlStatus, setDlStatus] = useState("idle"); // idle | loading | done | error
+
   useEffect(() => {
-    const t = setInterval(() => setActive(a => (a + 1) % ALUMNI.length), 5000);
+    const t = setInterval(() => setActive(a => (a + 1) % SUCCESS_STORIES.length), 6000);
     return () => clearInterval(t);
   }, []);
 
+  const handleDownload = async () => {
+    setDlStatus("loading");
+    try {
+      await downloadImpactReport(reportYear);
+      setDlStatus("done");
+      setTimeout(() => setDlStatus("idle"), 4000);
+    } catch (err) {
+      console.error("Report download failed:", err);
+      setDlStatus("error");
+      setTimeout(() => setDlStatus("idle"), 4000);
+    }
+  };
+
   return (
-    <section id="alumni" style={{ padding: "120px 5%", background: T.navy }}>
+    <section id="impacts" style={{ padding: "120px 5%", background: T.navy }}>
       <div style={{ maxWidth: 1320, margin: "0 auto" }}>
         <FadeIn>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 56, flexWrap: "wrap", gap: 16 }}>
             <div>
-              <span className="section-eyebrow">Success Stories</span>
-              <h2 className="section-title-white">10,000+ Youth Empowered.<br /><span className="italic" style={{ color: T.gold }}>Building Kenya's Future.</span></h2>
+              <span className="section-eyebrow">Real Lives Changed</span>
+              <h2 className="section-title-white">Impacts &<br /><span className="italic" style={{ color: T.gold }}>Success Stories</span></h2>
+              <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 15, lineHeight: 1.8, maxWidth: 480, marginTop: 16 }}>
+                Our impact goes beyond numbers. Here are real stories of youths whose lives have been transformed through our programs.
+              </p>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              {ALUMNI.map((_, i) => (
+              {SUCCESS_STORIES.map((_, i) => (
                 <div key={i} onClick={() => setActive(i)} style={{ width: active === i ? 32 : 8, height: 8, background: active === i ? T.gold : "rgba(255,255,255,0.2)", cursor: "pointer", transition: "all 0.3s", borderRadius: 4 }} />
               ))}
             </div>
           </div>
         </FadeIn>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-          {/* Featured testimonial */}
-          <FadeIn>
-            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", padding: "44px 48px", gridRow: "span 1" }}>
-              <div style={{ fontSize: 48, color: T.gold, fontFamily: "'Playfair Display',serif", lineHeight: 1, marginBottom: 24, opacity: 0.4 }}>"</div>
-              <blockquote className="display" style={{ fontSize: "clamp(17px,1.8vw,22px)", fontWeight: 400, fontStyle: "italic", color: "rgba(255,255,255,0.85)", lineHeight: 1.7, marginBottom: 32 }}>
-                {ALUMNI[active].quote}
-              </blockquote>
-              <div style={{ display: "flex", gap: 16, alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24 }}>
-                <div style={{ width: 52, height: 52, borderRadius: "50%", background: T.gold, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontFamily: "'Playfair Display',serif", fontWeight: 700, color: T.navy, flexShrink: 0 }}>
-                  {ALUMNI[active].name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                </div>
-                <div>
-                  <div style={{ color: "#fff", fontWeight: 600, fontSize: 15 }}>{ALUMNI[active].name}</div>
-                  <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>{ALUMNI[active].role}</div>
-                  <div style={{ color: T.gold, fontSize: 11, marginTop: 3 }}>Class of {ALUMNI[active].year} · {ALUMNI[active].programme}</div>
+        <div className="two-col" style={{ alignItems: "start" }}>
+          {/* LEFT — Success stories */}
+          <div>
+            <FadeIn>
+              <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderLeft: `4px solid ${T.gold}`, padding: "44px 48px" }}>
+                <div style={{ color: T.gold, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 16 }}>{SUCCESS_STORIES[active].title}</div>
+                <blockquote className="display" style={{ fontSize: "clamp(17px,1.8vw,22px)", fontWeight: 400, fontStyle: "italic", color: "rgba(255,255,255,0.85)", lineHeight: 1.7, marginBottom: 32 }}>
+                  "{SUCCESS_STORIES[active].quote}"
+                </blockquote>
+                <div style={{ display: "flex", gap: 16, alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: "50%", background: T.gold, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontFamily: "'Playfair Display',serif", fontWeight: 700, color: T.navy, flexShrink: 0 }}>
+                    {SUCCESS_STORIES[active].name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                  </div>
+                  <div>
+                    <div style={{ color: "#fff", fontWeight: 600, fontSize: 15 }}>{SUCCESS_STORIES[active].name}</div>
+                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>{SUCCESS_STORIES[active].role}</div>
+                    <div style={{ color: T.gold, fontSize: 11, marginTop: 3 }}>{SUCCESS_STORIES[active].programme}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </FadeIn>
+            </FadeIn>
 
-          {/* Other alumni */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {ALUMNI.filter((_, i) => i !== active).slice(0, 3).map((a, i) => (
-              <FadeIn key={a.name} delay={i * 0.07}>
-                <div onClick={() => setActive(ALUMNI.indexOf(a))} className="card-hover" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "20px 24px", cursor: "pointer", display: "flex", gap: 16, alignItems: "center" }}>
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontFamily: "'Playfair Display',serif", fontWeight: 700, color: "rgba(255,255,255,0.6)", flexShrink: 0 }}>
-                    {a.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+            {/* Other stories */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+              {SUCCESS_STORIES.filter((_, i) => i !== active).map((s, i) => (
+                <FadeIn key={s.name} delay={i * 0.07}>
+                  <div onClick={() => setActive(SUCCESS_STORIES.indexOf(s))} className="card-hover" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "18px 22px", cursor: "pointer", display: "flex", gap: 16, alignItems: "center" }}>
+                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontFamily: "'Playfair Display',serif", fontWeight: 700, color: "rgba(255,255,255,0.6)", flexShrink: 0 }}>
+                      {s.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: "rgba(255,255,255,0.8)", fontWeight: 600, fontSize: 14 }}>{s.name}</div>
+                      <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 12 }}>{s.role}</div>
+                    </div>
+                    <span style={{ color: T.gold, fontSize: 11, flexShrink: 0 }}>{s.title} →</span>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: "rgba(255,255,255,0.8)", fontWeight: 600, fontSize: 14 }}>{a.name}</div>
-                    <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 12 }}>{a.role}</div>
-                  </div>
-                  <span style={{ color: T.gold, fontSize: 11, flexShrink: 0 }}>Class of {a.year}</span>
+                </FadeIn>
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT — Impact numbers + report download */}
+          <div>
+            <FadeIn delay={0.1}>
+              <div style={{ background: "rgba(201,151,58,0.08)", border: "1px solid rgba(201,151,58,0.25)", padding: "36px 40px" }}>
+                <div style={{ color: T.gold, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8 }}>By the Numbers</div>
+                <div className="display" style={{ color: "#fff", fontSize: 26, fontWeight: 700, marginBottom: 12 }}>Impact Report</div>
+                <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, lineHeight: 1.75, marginBottom: 28 }}>
+                  Our annual impact reports showcase the measurable change we're making in communities across East Africa.
+                </p>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 28 }}>
+                  {IMPACT_STATS.map(s => (
+                    <div key={s.label} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)", padding: "20px 18px", textAlign: "center" }}>
+                      <div className="display" style={{ color: "#fff", fontSize: 30, fontWeight: 700, marginBottom: 6 }}>{s.value}</div>
+                      <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, lineHeight: 1.55 }}>{s.label}</div>
+                    </div>
+                  ))}
                 </div>
-              </FadeIn>
-            ))}
+
+                {/* Download by year */}
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 24 }}>
+                  <label style={{ display: "block", color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>
+                    Select report year
+                  </label>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+                    {REPORT_YEARS.map(y => (
+                      <button
+                        key={y}
+                        onClick={() => setReportYear(y)}
+                        style={{
+                          background: reportYear === y ? T.gold : "rgba(255,255,255,0.06)",
+                          color: reportYear === y ? T.navy : "rgba(255,255,255,0.55)",
+                          border: reportYear === y ? "none" : "1px solid rgba(255,255,255,0.1)",
+                          padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                          fontFamily: "'DM Sans',sans-serif", letterSpacing: "0.04em", transition: "all 0.15s",
+                        }}
+                      >
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Quick preview of selected year */}
+                  <div style={{ background: "rgba(10,22,40,0.5)", border: "1px solid rgba(255,255,255,0.06)", padding: "14px 18px", marginBottom: 18 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                      <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>Youth reached in {reportYear}</span>
+                      <span style={{ color: T.gold, fontSize: 13, fontWeight: 700 }}>{IMPACT_REPORTS[reportYear].youthReached}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+                      <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>Network</span>
+                      <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 13 }}>{IMPACT_REPORTS[reportYear].hubs}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn-primary"
+                    style={{ width: "100%", textAlign: "center", padding: "15px", fontSize: 13 }}
+                    onClick={handleDownload}
+                    disabled={dlStatus === "loading"}
+                  >
+                    {dlStatus === "loading" ? "Preparing PDF…"
+                      : dlStatus === "done" ? "✓ Downloaded!"
+                        : dlStatus === "error" ? "Download failed — try again"
+                          : `⬇ Download ${reportYear} Impact Report (PDF)`}
+                  </button>
+                  <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, textAlign: "center", marginTop: 10, lineHeight: 1.6 }}>
+                    Reports are fetched from our archive when available, or compiled live from our impact data.
+                  </p>
+                </div>
+              </div>
+            </FadeIn>
           </div>
         </div>
 
-        {/* Employers */}
+        {/* Partners strip (kept from original, reframed for the Hub) */}
         <FadeIn delay={0.1}>
           <div style={{ marginTop: 64, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 48 }}>
-            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", textTransform: "uppercase", textAlign: "center", marginBottom: 28 }}>Our Graduates Work At</div>
+            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, fontWeight: 600, letterSpacing: "0.15em", textTransform: "uppercase", textAlign: "center", marginBottom: 28 }}>Our Youth Build Careers & Ventures With</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "center" }}>
-              {["Nation Media Group", "KBC", "Citizen TV", "Universal Music EA", "NTV Kenya", "Radio Africa Group", "BBC Africa", "AFP", "Kenya Airways Media", "Standard Group"].map(e => (
+              {["Conrad N. Hilton Foundation", "Imaginable Futures", "GOYN Mombasa", "County Government of Mombasa", "ICT Authority", "National Museums of Kenya", "Tony Elumelu Foundation", "DataKind", "Cisco", "Seacom"].map(e => (
                 <div key={e} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.06)", padding: "10px 20px", fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{e}</div>
               ))}
             </div>
@@ -1261,8 +1655,29 @@ function AlumniSection() {
 }
 
 /* ─────────────────── CONTACT ─────────────────── */
+const SWAHILIPOT_EMAIL = "info@swahilipothub.co.ke";
+
 function ContactSection() {
   const [sent, setSent] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [msg, setMsg] = useState({ name: "", email: "", phone: "", type: "General Enquiry", body: "" });
+  const upd = (k, v) => setMsg(m => ({ ...m, [k]: v }));
+
+  /*
+   * Sends the message to Swahilipot's main email. With no backend on this
+   * site, we open the visitor's email app pre-addressed to
+   * info@swahilipothub.co.ke with everything filled in — they just hit send.
+   */
+  const handleSend = () => {
+    if (!msg.name || !msg.email || !msg.body) return;
+    const subject = encodeURIComponent(`[Website] ${msg.type} — ${msg.name}`);
+    const body = encodeURIComponent(
+      `Name: ${msg.name}\nEmail: ${msg.email}\nPhone: ${msg.phone || "—"}\nEnquiry type: ${msg.type}\n\n${msg.body}`
+    );
+    window.location.href = `mailto:${SWAHILIPOT_EMAIL}?subject=${subject}&body=${body}`;
+    setSent(true);
+  };
+
   return (
     <section id="contact" style={{ padding: "120px 5%", background: "#fff" }}>
       <div style={{ maxWidth: 1320, margin: "0 auto" }}>
@@ -1278,11 +1693,11 @@ function ContactSection() {
             <div>
               <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 40 }}>
                 {[
-                  { icon: "📍", label: "Address", val: "Broadcast House, Nyali Road, Mombasa, Kenya", sub: "P.O. Box 12345-80100, Mombasa" },
-                  { icon: "📞", label: "Phone", val: "+254 41 000 0000", sub: "Mon–Fri 08:00–17:00" },
-                  { icon: "✉", label: "Email", val: "admissions@broadcastmedia.ac.ke", sub: "Also: info@broadcastmedia.ac.ke" },
-                  { icon: "📻", label: "FM Station", val: "98.4 FM Coast", sub: "On air 06:00–midnight daily" },
-                  { icon: "🌐", label: "Website", val: "www.broadcastmedia.ac.ke", sub: "Student portal: my.broadcastmedia.ac.ke" },
+                  { icon: "📍", label: "Address", val: "Swahili Cultural Centre, Sir Mbarak Hinaway Rd", sub: "Old Town, Mombasa, Kenya" },
+                  { icon: "📞", label: "Phone", val: "+254 11 4635505", sub: "Mon–Sat, working hours" },
+                  { icon: "✉", label: "Email", val: "info@swahilipothub.co.ke", sub: "We respond as soon as we can" },
+                  { icon: "📻", label: "Radio", val: "Swahilipot FM", sub: "Youth-run community radio · live & streaming" },
+                  { icon: "🌐", label: "Website", val: "www.swahilipothub.co.ke", sub: "Programs, events & opportunities" },
                 ].map(item => (
                   <div key={item.label} style={{ display: "flex", gap: 20, alignItems: "flex-start", padding: "20px 24px", background: T.offWhite }}>
                     <div style={{ width: 44, height: 44, background: T.navy, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{item.icon}</div>
@@ -1294,14 +1709,35 @@ function ContactSection() {
                   </div>
                 ))}
               </div>
-              {/* Map placeholder */}
-              <div style={{ background: T.navy, height: 220, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
-                <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`, backgroundSize: "30px 30px" }} />
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>📍</div>
-                  <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Nyali Road, Mombasa</div>
-                  <button className="btn-outline-white" style={{ marginTop: 16, fontSize: 11, padding: "8px 20px" }}>Open in Google Maps</button>
-                </div>
+              {/* Map — opens embedded inside this box, no new tab or popup */}
+              <div style={{ background: T.navy, height: 300, position: "relative", overflow: "hidden" }}>
+                {showMap ? (
+                  <>
+                    <iframe
+                      title="Swahilipot Hub Foundation location"
+                      src="https://maps.google.com/maps?q=Swahilipot+Hub+Foundation,+Mombasa,+Kenya&z=17&output=embed"
+                      style={{ width: "100%", height: "100%", border: 0, display: "block" }}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                    <button
+                      onClick={() => setShowMap(false)}
+                      style={{ position: "absolute", top: 10, right: 10, background: T.navy, color: "#fff", border: "none", padding: "6px 12px", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", boxShadow: "0 2px 10px rgba(0,0,0,0.3)" }}
+                    >
+                      ✕ Hide Map
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                    <div style={{ position: "absolute", inset: 0, backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`, backgroundSize: "30px 30px" }} />
+                    <div style={{ textAlign: "center", position: "relative" }}>
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>📍</div>
+                      <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Swahilipot Hub · Old Town, Mombasa</div>
+                      <button className="btn-outline-white" style={{ marginTop: 16, fontSize: 11, padding: "8px 20px" }} onClick={() => setShowMap(true)}>Open in Google Maps</button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </FadeIn>
@@ -1309,48 +1745,52 @@ function ContactSection() {
             {sent ? (
               <div style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "48px 40px", textAlign: "center" }} className="fade-in-anim">
                 <div style={{ fontSize: 48, marginBottom: 16 }}>✉</div>
-                <div className="display" style={{ fontSize: 22, fontWeight: 700, color: T.navy, marginBottom: 12 }}>Message Sent!</div>
-                <p style={{ color: T.textMuted, fontSize: 14, lineHeight: 1.75, marginBottom: 24 }}>We'll respond within 1 working day. For urgent enquiries call +254 41 000 0000.</p>
-                <button className="btn-outline" onClick={() => setSent(false)}>Send Another</button>
+                <div className="display" style={{ fontSize: 22, fontWeight: 700, color: T.navy, marginBottom: 12 }}>Almost There!</div>
+                <p style={{ color: T.textMuted, fontSize: 14, lineHeight: 1.75, marginBottom: 24 }}>
+                  Your email app has opened with your message addressed to <strong>{SWAHILIPOT_EMAIL}</strong> — just press send there to deliver it. For urgent matters call +254 11 4635505.
+                </p>
+                <button className="btn-outline" onClick={() => { setSent(false); setMsg({ name: "", email: "", phone: "", type: "General Enquiry", body: "" }); }}>Write Another Message</button>
               </div>
             ) : (
               <div style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "40px 40px" }}>
-                <div className="display" style={{ fontSize: 20, fontWeight: 700, color: T.navy, marginBottom: 24 }}>Send Us a Message</div>
-                {[["Full Name", "text", "e.g. Amina Hassan"], ["Email Address", "email", "your@email.com"], ["Phone Number", "tel", "+254 700 000 000"]].map(([label, type, ph]) => (
-                  <div key={label} style={{ marginBottom: 16 }}>
+                <div className="display" style={{ fontSize: 20, fontWeight: 700, color: T.navy, marginBottom: 6 }}>Send Us a Message</div>
+                <p style={{ color: T.textMuted, fontSize: 13, marginBottom: 24 }}>Your message goes straight to {SWAHILIPOT_EMAIL}.</p>
+                {[["Full Name *", "name", "text", "e.g. Amina Hassan"], ["Email Address *", "email", "email", "your@email.com"], ["Phone Number", "phone", "tel", "+254 700 000 000"]].map(([label, key, type, ph]) => (
+                  <div key={key} style={{ marginBottom: 16 }}>
                     <label style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.textLight, marginBottom: 6 }}>{label}</label>
-                    <input className="input-field" type={type} placeholder={ph} />
+                    <input className="input-field" type={type} placeholder={ph} value={msg[key]} onChange={e => upd(key, e.target.value)} />
                   </div>
                 ))}
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.textLight, marginBottom: 6 }}>Enquiry Type</label>
-                  <select className="input-field" style={{ appearance: "none", cursor: "pointer" }}>
-                    <option>Admissions Enquiry</option>
-                    <option>Programme Information</option>
-                    <option>Facilities & Studio Tours</option>
-                    <option>Partnerships & Industry</option>
+                  <select className="input-field" style={{ appearance: "none", cursor: "pointer" }} value={msg.type} onChange={e => upd("type", e.target.value)}>
+                    <option>General Enquiry</option>
+                    <option>Programs & Training</option>
+                    <option>Partnerships & Sponsorship</option>
+                    <option>Swahilipot FM</option>
                     <option>Media & Press</option>
-                    <option>Alumni Affairs</option>
-                    <option>Complaint or Feedback</option>
+                    <option>Volunteering & Internships</option>
+                    <option>Impact & Community Programmes</option>
+                    <option>Feedback</option>
                     <option>Other</option>
                   </select>
                 </div>
                 <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.textLight, marginBottom: 6 }}>Message</label>
-                  <textarea className="input-field" rows={5} placeholder="How can we help you?" style={{ resize: "vertical" }} />
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.textLight, marginBottom: 6 }}>Message *</label>
+                  <textarea className="input-field" rows={5} placeholder="How can we help you?" style={{ resize: "vertical" }} value={msg.body} onChange={e => upd("body", e.target.value)} />
                 </div>
-                <button className="btn-primary" style={{ width: "100%", textAlign: "center", fontSize: 14, padding: "15px" }} onClick={() => setSent(true)}>
+                <button className="btn-primary" style={{ width: "100%", textAlign: "center", fontSize: 14, padding: "15px" }} onClick={handleSend}>
                   Send Message →
                 </button>
                 <div style={{ display: "flex", gap: 24, marginTop: 24, paddingTop: 20, borderTop: `1px solid ${T.border}` }}>
                   <div style={{ flex: 1, textAlign: "center" }}>
-                    <div style={{ fontSize: 11, color: T.textLight, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>Response Time</div>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>Within 24 hrs</div>
+                    <div style={{ fontSize: 11, color: T.textLight, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>Delivered To</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: T.navy }}>{SWAHILIPOT_EMAIL}</div>
                   </div>
                   <div style={{ width: 1, background: T.border }} />
                   <div style={{ flex: 1, textAlign: "center" }}>
-                    <div style={{ fontSize: 11, color: T.textLight, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>Office Hours</div>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>Mon–Fri 8–5pm</div>
+                    <div style={{ fontSize: 11, color: T.textLight, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 4 }}>Open Days</div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: T.navy }}>Mon–Sat</div>
                   </div>
                 </div>
               </div>
@@ -1364,39 +1804,100 @@ function ContactSection() {
 
 /* ─────────────────── FOOTER ─────────────────── */
 function Footer({ onNav }) {
+  const { onAir } = useRadio();
+  /*
+   * Footer links. Each link either scrolls to a section on this page
+   * (section: "about" etc.) or opens an external URL (href: "https://…").
+   */
+  const FOOTER_COLS = [
+    {
+      title: "Quick Links",
+      links: [
+        { label: "About Us", section: "about" },
+        { label: "Innovation Spaces", section: "studios" },
+        { label: "News & Updates", section: "news" },
+        { label: "FM Live", section: "fm-live" },
+        { label: "Impacts & Success Stories", section: "impacts" },
+        { label: "Contact Us", section: "contact" },
+      ],
+    },
+    {
+      title: "Our Programs",
+      links: [
+        { label: "Digital Skills Training", section: "studios" },
+        { label: "Entrepreneurship & Incubation", section: "studios" },
+        { label: "Creative Arts & Media", section: "studios" },
+        { label: "Mentorship & Case Management", section: "impacts" },
+        { label: "Community Open Days", section: "studios" },
+      ],
+    },
+    {
+      title: "Get Involved",
+      links: [
+        { label: "Careers & Internships", href: "https://www.swahilipothub.co.ke/careers" },
+        { label: "Volunteer With Us", section: "contact" },
+        { label: "Partner With Us", section: "contact" },
+        { label: "Visit the Hub", section: "contact" },
+        { label: "Download Impact Report", section: "impacts" },
+      ],
+    },
+  ];
+
+  const followLink = (l) => {
+    if (l.href) window.open(l.href, "_blank");
+    else if (l.section) onNav(l.section);
+  };
+
   return (
     <footer style={{ background: T.navy, padding: "72px 5% 32px" }}>
       <div style={{ maxWidth: 1320, margin: "0 auto" }}>
         {/* Top CTA strip */}
         <div style={{ background: T.gold, padding: "28px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, marginBottom: 56 }}>
           <div>
-            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: T.navy }}>September 2026 Applications Are Open</div>
-            <div style={{ color: "rgba(10,22,40,0.6)", fontSize: 14, marginTop: 4 }}>Early applicants receive a registration fee waiver. Apply before 31 July.</div>
+            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: T.navy }}>Be Part of the Change</div>
+            <div style={{ color: "rgba(10,22,40,0.6)", fontSize: 14, marginTop: 4 }}>Join our programs in technology, arts and entrepreneurship — open to youth across the Coast region.</div>
           </div>
-          <button className="btn-navy" onClick={() => onNav("admissions")} style={{ whiteSpace: "nowrap" }}>Apply Now →</button>
+          <button className="btn-navy" onClick={() => onNav("contact")} style={{ whiteSpace: "nowrap" }}>Get in Touch →</button>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
           <div>
-            <div className="display" style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 4 }}>Broadcast Media Institution</div>
-            <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 20 }}>Mombasa, Kenya · Est. 2001</div>
+            <div className="display" style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 4 }}>Swahilipot Hub Foundation</div>
+            <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 20 }}>Old Town, Mombasa, Kenya · Est. 2016</div>
             <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, lineHeight: 1.8, maxWidth: 280 }}>
-              Training the next generation of East African media professionals through world-class facilities, real broadcasting, and industry-immersive education.
+              A technology, creatives and heritage space empowering youth across Kenya's coastal region through digital skills, entrepreneurship, arts and community-driven innovation.
             </p>
-            <div style={{ marginTop: 24 }}>
+            <div style={{ marginTop: 20 }}>
+              {[
+                ["📍", "Swahili Cultural Centre, Sir Mbarak Hinaway Rd"],
+                ["✉", "info@swahilipothub.co.ke"],
+                ["📞", "+254 11 4635505"],
+              ].map(([icon, val]) => (
+                <div key={val} style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: 13 }}>{icon}</span>
+                  <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 13 }}>{val}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 20 }}>
               <div style={{ fontSize: 11, color: T.gold, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Tune In</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div onClick={() => onNav("fm-live")} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
                 <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 14 }}>
                   {[0.5, 1, 0.7, 0.9, 0.4].map((h, i) => (
-                    <div key={i} className="audio-bar" style={{ height: `${h * 14}px`, animationDuration: `${0.5 + i * 0.15}s` }} />
+                    <div key={i} className="audio-bar" style={{ height: onAir ? `${h * 14}px` : "3px", animationDuration: `${0.5 + i * 0.15}s`, background: onAir ? T.green : "#555" }} />
                   ))}
                 </div>
-                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>98.4 FM · Live Now</span>
+                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 13 }}>Swahilipot FM · {onAir ? "On Air" : "Off Air"}</span>
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              {["f", "𝕏", "in", "▶"].map((s, i) => (
-                <div key={i} style={{ width: 34, height: 34, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 13, color: "rgba(255,255,255,0.5)", transition: "background 0.2s" }}
+              {[
+                ["f", "https://www.facebook.com/Swahilipothub"],
+                ["𝕏", "https://x.com/swahilipothub"],
+                ["in", "https://ke.linkedin.com/company/swahilipot-hub"],
+                ["▶", "https://www.youtube.com/@swahilipothubfoundation"],
+              ].map(([s, url]) => (
+                <div key={s} onClick={() => window.open(url, "_blank")} style={{ width: 34, height: 34, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 13, color: "rgba(255,255,255,0.5)", transition: "background 0.2s" }}
                   onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.12)"}
                   onMouseOut={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}>
                   {s}
@@ -1404,19 +1905,17 @@ function Footer({ onNav }) {
               ))}
             </div>
           </div>
-          {[
-            { title: "Programmes", links: ["Diploma in Radio Broadcasting", "Diploma in Journalism", "Diploma in Video Production", "Diploma in Audio Engineering", "Diploma in Digital Media", "Short Courses & CPD"] },
-            { title: "Institution", links: ["About Us", "Leadership & Faculty", "Facilities & Studios", "Accreditation", "News & Events", "Alumni Network"] },
-            { title: "Admissions", links: ["How to Apply", "Entry Requirements", "Tuition Fees", "HELB Loans & Bursaries", "Campus Tours", "Contact Admissions"] },
-          ].map(col => (
+          {FOOTER_COLS.map(col => (
             <div key={col.title}>
               <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 18 }}>{col.title}</div>
               {col.links.map(l => (
-                <div key={l} style={{ marginBottom: 10 }}>
-                  <a href="#" style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, textDecoration: "none", transition: "color 0.15s", lineHeight: 1.6 }}
+                <div key={l.label} style={{ marginBottom: 10 }}>
+                  <a
+                    onClick={() => followLink(l)}
+                    style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, textDecoration: "none", transition: "color 0.15s", lineHeight: 1.6, cursor: "pointer" }}
                     onMouseOver={e => e.target.style.color = "rgba(255,255,255,0.7)"}
                     onMouseOut={e => e.target.style.color = "rgba(255,255,255,0.35)"}>
-                    {l}
+                    {l.label}{l.href ? " ↗" : ""}
                   </a>
                 </div>
               ))}
@@ -1425,10 +1924,10 @@ function Footer({ onNav }) {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 24, gap: 24, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ color: "rgba(255,255,255,0.2)", fontSize: 12 }}>
-            © 2026 Broadcast Media Institution. Registered under the Kenyan Universities Act. Accredited by KNQA. CA Licence No. BC/FM/KE-2001-0048.
+           © 2026 Swahilipot Hub Foundation. Registered Non-Profit Organization, Mombasa, Kenya. All Rights Reserved.
           </div>
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-            {["Privacy Policy", "Terms of Use", "Accreditation", "Cookie Policy", "Accessibility"].map(l => (
+            {["Privacy Policy", "Terms of Use", "Cookie Policy", "Accessibility"].map(l => (
               <a key={l} href="#" style={{ color: "rgba(255,255,255,0.2)", fontSize: 12, textDecoration: "none" }}
                 onMouseOver={e => e.target.style.color = "rgba(255,255,255,0.4)"}
                 onMouseOut={e => e.target.style.color = "rgba(255,255,255,0.2)"}>
@@ -1446,6 +1945,7 @@ function Footer({ onNav }) {
 function FloatingElements({ onNav }) {
   const [show, setShow] = useState(false);
   const [showFM, setShowFM] = useState(false);
+  const { onAir } = useRadio();
   useEffect(() => {
     const h = () => { setShow(window.scrollY > 600); };
     window.addEventListener("scroll", h);
@@ -1456,15 +1956,15 @@ function FloatingElements({ onNav }) {
       {show && (
         <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ position: "fixed", bottom: 96, right: 24, width: 44, height: 44, background: T.navy, color: "#fff", border: "none", fontSize: 18, cursor: "pointer", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>↑</button>
       )}
-      {/* Floating FM badge */}
+      {/* Floating FM badge — matches the shared radio state */}
       <div style={{ position: "fixed", bottom: 24, right: show ? 76 : 24, zIndex: 100, transition: "right 0.3s" }}>
-        <div onClick={() => setShowFM(s => !s)} style={{ background: T.green, padding: "8px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+        <div onClick={() => setShowFM(s => !s)} style={{ background: onAir ? T.green : "#333", padding: "8px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
           <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 12 }}>
             {[0.5, 1, 0.6].map((h, i) => (
-              <div key={i} className="audio-bar" style={{ height: `${h * 12}px`, animationDuration: `${0.5 + i * 0.2}s` }} />
+              <div key={i} className="audio-bar" style={{ height: onAir ? `${h * 12}px` : "3px", animationDuration: `${0.5 + i * 0.2}s`, background: onAir ? "#fff" : "#777" }} />
             ))}
           </div>
-          <span style={{ color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em" }}>98.4 LIVE</span>
+          <span style={{ color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em" }}>{onAir ? "ON AIR" : "OFF AIR"}</span>
         </div>
         {showFM && (
           <div className="slide-down" style={{ position: "absolute", bottom: "100%", right: 0, width: 280, marginBottom: 8 }}>
@@ -1528,7 +2028,6 @@ function Navbar({ onNav, currentSection, navigate }) {
               style={{
                 height: 40,
                 width: "auto",
-                objectFit: "contain",
                 marginRight: "30px",
                 objectFit: "contain",
               }}
@@ -1560,7 +2059,7 @@ function Navbar({ onNav, currentSection, navigate }) {
             </div>
           </div>
           <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
-            {NAV_SECTIONS.filter((n) => n !== "Home").map((n) => (
+            {NAV_SECTIONS.filter((n) => n && n !== "Home").map((n) => (
               <a
                 key={n}
                 className={`nav-link${currentSection === n.toLowerCase().replace(" ", "-") ? " active" : ""}`}
@@ -1587,9 +2086,9 @@ function Navbar({ onNav, currentSection, navigate }) {
             </a>
             <button
               className="btn-primary"
-              onClick={() => navigate("/login")}
+              onClick={() => window.open("https://www.swahilipothub.co.ke/events", "_blank")}
               style={{ padding: "9px 18px", fontSize: 12 }}>
-              Apply Now
+              Events
             </button>
           </div>
         </div>
@@ -1608,7 +2107,7 @@ function Navbar({ onNav, currentSection, navigate }) {
             }}>
             ✕
           </div>
-          {NAV_SECTIONS.map((n) => (
+          {NAV_SECTIONS.filter(Boolean).map((n) => (
             <a
               key={n}
               onClick={() => {
@@ -1631,10 +2130,10 @@ function Navbar({ onNav, currentSection, navigate }) {
             className="btn-primary"
             style={{ marginTop: 16, padding: "15px" }}
             onClick={() => {
-              onNav("admissions");
+              window.open("https://www.swahilipothub.co.ke/events", "_blank");
               setMobileOpen(false);
             }}>
-            Apply Now
+            Events
           </button>
         </div>
       )}
@@ -1674,7 +2173,7 @@ export default function BroadcastInstitutionSite() {
 
   // Intersection observer to track active section
   useEffect(() => {
-    const ids = ["home", "about", "programmes", "studios", "news", "fm-live", "admissions", "alumni", "contact"];
+    const ids = ["home", "about", "studios", "news", "fm-live", "programs", "impacts", "contact"];
     const obs = new IntersectionObserver((entries) => {
       entries.forEach(e => { if (e.isIntersecting) setSection(e.target.id); });
     }, { threshold: 0.3 });
@@ -1694,12 +2193,12 @@ export default function BroadcastInstitutionSite() {
       <Navbar onNav={navTo} currentSection={section} navigate={navigate} />
       <HeroSection onNav={navTo} />
       <AboutSection />
-      {/*<ProgrammesSection />*/}
-      <StudiosSection />
+      {/* <ProgrammesSection /> */}
+      <StudiosSection onNav={navTo} />
       <NewsSection />
       <FMLiveSection />
       {/*<AdmissionsSection />*/}
-      <AlumniSection />
+      <ImpactsSection />
       <ContactSection />
       <Footer onNav={navTo} />
       <FloatingElements onNav={navTo} />
