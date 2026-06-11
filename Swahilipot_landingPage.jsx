@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 /* ─────────────────── DESIGN TOKENS ─────────────────── */
 const T = {
-  navy: "#0a2854",
+  navy: "#123d7d",
   navyMid: "#12233E",
   navyLight: "#b30c7b",
   gold: "#C9973A",
@@ -647,6 +647,113 @@ const GLOBAL_CSS = `
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: ${T.offWhite}; }
   ::-webkit-scrollbar-thumb { background: ${T.navyLight}; border-radius: 3px; }
+
+  /* ───────── RESPONSIVE LAYOUT ───────── */
+  img, iframe, video { max-width: 100%; }
+
+  /* Navbar */
+  .nav-wrap { padding: 0 4%; }
+  .nav-brand { display: flex; align-items: center; gap: 50px; cursor: pointer; }
+  .nav-brand img { margin-right: 30px; }
+  .nav-links-desktop { display: flex; gap: 28px; align-items: center; }
+  .nav-burger {
+    display: none; background: transparent; border: 1px solid rgba(255,255,255,0.25);
+    color: #fff; font-size: 18px; padding: 6px 12px; cursor: pointer; line-height: 1;
+    font-family: 'DM Sans', sans-serif;
+  }
+  @media (max-width: 1150px) {
+    .nav-links-desktop { display: none; }
+    .nav-burger { display: flex; align-items: center; }
+    .nav-brand { gap: 12px; }
+    .nav-brand img { margin-right: 0; height: 32px !important; }
+    .nav-login { display: none; }
+  }
+  @media (max-width: 480px) {
+    .nav-brand-title { font-size: 18px !important; }
+  }
+  .mobile-menu { overflow-y: auto; }
+
+  /* Hero */
+  .hero-content {
+    padding-top: 180px; padding-bottom: 120px;
+    display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 80px; align-items: center;
+  }
+  @media (max-width: 1000px) {
+    .hero-content { grid-template-columns: 1fr; gap: 48px; padding-top: 150px; padding-bottom: 80px; }
+  }
+  @media (max-width: 700px) {
+    .hero-content { padding-top: 140px; padding-bottom: 64px; }
+    .scroll-indicator { display: none; }
+  }
+
+  /* News featured card */
+  .news-featured-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 900px) { .news-featured-grid { grid-template-columns: 1fr; } }
+
+  /* CTA strips with content + button */
+  .cta-grid { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; }
+  @media (max-width: 800px) { .cta-grid { grid-template-columns: 1fr; } }
+
+  /* Footer */
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
+  @media (max-width: 1000px) { .footer-grid { grid-template-columns: 1fr 1fr; gap: 36px; } }
+  @media (max-width: 580px) { .footer-grid { grid-template-columns: 1fr; } }
+  .footer-bottom { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+  @media (max-width: 700px) { .footer-bottom { grid-template-columns: 1fr; gap: 12px; } }
+
+  /* Tighter section rhythm + smaller type on phones */
+  @media (max-width: 700px) {
+    section { padding-top: 72px !important; padding-bottom: 64px !important; }
+    footer { padding-top: 56px !important; }
+    .section-title, .section-title-white { font-size: clamp(26px, 8vw, 34px); }
+    .card-pad { padding: 24px 18px !important; }
+    h1.display { font-size: clamp(30px, 9.5vw, 44px) !important; }
+    .hero-stats { display: grid !important; grid-template-columns: 1fr 1fr; gap: 20px !important; }
+  }
+  @media (max-width: 480px) {
+    .two-col { gap: 24px; }
+    .nav-events { display: none; }
+    .nav-brand img { height: 28px !important; }
+  }
+  @media (max-width: 380px) {
+    .nav-brand-sub { display: none; }
+  }
+
+  /* ───────── FLUID TYPOGRAPHY ─────────
+     Text steps down with screen width. Inline styles set px values, so these
+     breakpoint rules use !important to win on smaller screens. */
+  @media (max-width: 1000px) {
+    p { font-size: 15px !important; }
+    blockquote { font-size: 18px !important; }
+  }
+  @media (max-width: 700px) {
+    p { font-size: 14px !important; }
+    blockquote { font-size: 16px !important; }
+    h3 { font-size: 17px !important; }
+    h4 { font-size: 14px !important; }
+    .section-eyebrow { font-size: 10px; letter-spacing: 0.14em; }
+    .btn-primary, .btn-navy, .btn-outline, .btn-outline-white {
+      font-size: 12px !important; padding: 11px 20px;
+    }
+    /* 16px stops iOS Safari from auto-zooming when an input is focused */
+    .input-field { font-size: 16px !important; }
+    .tag { font-size: 10px; }
+  }
+  @media (max-width: 480px) {
+    p { font-size: 13.5px !important; }
+    blockquote { font-size: 15px !important; }
+    .nav-link { font-size: 11px; }
+  }
+
+  /* Never allow sideways scroll on phones */
+  html, body { overflow-x: hidden; max-width: 100vw; }
+
+  /* Compact FM bar: wrap instead of overflowing */
+  .fm-compact { flex-wrap: wrap; }
+  .fm-compact .fm-show-name {
+    flex: 1; min-width: 0; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
 `;
 /* ─────────────────── FM Live Widget ──────────────────── */
 function FMLiveWidget({ compact = false }) {
@@ -673,6 +780,7 @@ function FMLiveWidget({ compact = false }) {
   if (compact)
     return (
       <div
+        className="fm-compact"
         style={{
           background: onAir ? T.navy : "#1a0a0a",
           padding: "12px 20px",
@@ -706,7 +814,7 @@ function FMLiveWidget({ compact = false }) {
           {onAir ? "ON AIR · SWAHILIPOT FM" : "OFF AIR"}
         </span>
 
-        <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, flex: 1 }}>
+        <span className="fm-show-name" style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}>
           {showName}
         </span>
 
@@ -768,7 +876,7 @@ function FMLiveWidget({ compact = false }) {
         </span>
       </div>
 
-      <div style={{ padding: "24px 28px" }}>
+      <div className="card-pad" style={{ padding: "24px 28px" }}>
         <div style={{ display: "flex", gap: 16, alignItems: "flex-end", marginBottom: 20, height: 40 }}>
           {[0.5, 0.8, 1, 0.6, 0.9, 0.4, 0.7, 1, 0.5, 0.6, 0.8, 0.3].map((h, i) => (
             <div
@@ -789,7 +897,7 @@ function FMLiveWidget({ compact = false }) {
               Now Playing
             </div>
 
-            <div style={{ color: "#fff", fontSize: 20, fontFamily: "'Playfair Display',serif" }}>
+            <div style={{ color: "#fff", fontSize: "clamp(16px, 4vw, 20px)", fontFamily: "'Playfair Display',serif" }}>
               {showName}
             </div>
 
@@ -803,7 +911,7 @@ function FMLiveWidget({ compact = false }) {
               Listeners
             </div>
 
-            <div style={{ color: T.gold, fontSize: 24, fontWeight: 700 }}>
+            <div style={{ color: T.gold, fontSize: "clamp(19px, 5vw, 24px)", fontWeight: 700 }}>
               {listeners.toLocaleString()}
             </div>
           </div>
@@ -849,7 +957,7 @@ function HeroSection({ onNav }) {
       </div>
 
       {/* Main hero content */}
-      <div style={{ maxWidth: 1320, margin: "0 auto", padding: "0 5%", paddingTop: 180, paddingBottom: 120, display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 80, alignItems: "center" }}>
+      <div className="hero-content" style={{ maxWidth: 1320, margin: "0 auto", paddingLeft: "5%", paddingRight: "5%" }}>
         <div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.05)", border: `1px solid rgba(201,151,58,0.25)`, padding: "6px 16px 6px 8px", marginBottom: 32 }}>
             <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 14 }}>
@@ -865,18 +973,18 @@ function HeroSection({ onNav }) {
             <span style={{ color: T.gold, fontStyle: "italic" }}>Digital Innovators</span><br />
             Are Built.
           </h1>
-          <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 18, lineHeight: 1.75, maxWidth: 520, marginBottom: 40, fontWeight: 300 }}>
+          <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "clamp(15px, 2.4vw, 18px)", lineHeight: 1.75, maxWidth: 520, marginBottom: 40, fontWeight: 300 }}>
             Swahilipot Hub Foundation is a vibrant innovation and creative technology hub in Mombasa that empowers young people through digital skills training, entrepreneurship, innovation, arts, and community-driven programs, while providing a collaborative space where ideas are nurtured into impactful solutions that drive personal growth and positive community transformation.
           </p>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <button className="btn-primary" onClick={() => onNav("programs")} style={{ fontSize: 14, padding: "15px 32px" }}>Explore Programs</button>
             <button className="btn-outline-white" onClick={() => onNav("studios")} style={{ fontSize: 14, padding: "15px 32px" }}>Visit Our Spaces</button>
           </div>
-          <div style={{ display: "flex", gap: 40, marginTop: 52, paddingTop: 40, borderTop: "1px solid rgba(255,255,255,0.08)", flexWrap: "wrap" }}>
+          <div className="hero-stats" style={{ display: "flex", gap: 40, marginTop: 52, paddingTop: 40, borderTop: "1px solid rgba(255,255,255,0.08)", flexWrap: "wrap" }}>
             {STATS.map(s => (
               <div key={s.label}>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                  <span className="display" style={{ fontSize: 32, fontWeight: 700, color: "#fff" }}>{s.value}</span>
+                  <span className="display" style={{ fontSize: "clamp(24px, 6vw, 32px)", fontWeight: 700, color: "#fff" }}>{s.value}</span>
                   {s.unit && <span style={{ color: T.gold, fontSize: 20, fontWeight: 700 }}>{s.unit}</span>}
                 </div>
                 <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, letterSpacing: "0.05em", marginTop: 2 }}>{s.label}</div>
@@ -908,7 +1016,7 @@ function HeroSection({ onNav }) {
       </div>
 
       {/* Scroll indicator */}
-      <div style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+      <div className="scroll-indicator" style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
         <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" }}>Scroll</span>
         <div style={{ width: 1, height: 40, background: "linear-gradient(to bottom, rgba(255,255,255,0.3), transparent)" }} />
       </div>
@@ -1067,7 +1175,7 @@ function ProgrammesSection() {
 
         {/* Call to action */}
         <FadeIn delay={0.1}>
-          <div style={{ marginTop: 64, background: T.navy, padding: "52px 48px", display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "center" }}>
+          <div className="cta-grid card-pad" style={{ marginTop: 64, background: T.navy, padding: "52px 48px" }}>
             <div>
               <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>Not sure which programme?</div>
               <div className="display" style={{ fontSize: 24, fontWeight: 700, color: "#fff" }}>Speak with our Academic Advisors</div>
@@ -1122,7 +1230,7 @@ function StudiosSection({ onNav }) {
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%)" }} />
                 <div style={{ position: "absolute", bottom: 24, left: 28, right: 28 }}>
                   <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 6 }}>{FACILITIES[active].area}</div>
-                  <div className="display" style={{ color: "#fff", fontSize: 24, fontWeight: 700 }}>{FACILITIES[active].name}</div>
+                  <div className="display" style={{ color: "#fff", fontSize: "clamp(18px, 4.5vw, 24px)", fontWeight: 700 }}>{FACILITIES[active].name}</div>
                 </div>
               </div>
               <div style={{ background: "#fff", border: `1px solid ${T.border}`, borderTop: "none", padding: "28px 32px" }}>
@@ -1138,10 +1246,10 @@ function StudiosSection({ onNav }) {
 
         {/* Open day CTA */}
         <FadeIn delay={0.1}>
-          <div style={{ marginTop: 64, background: T.gold, padding: "40px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 24 }}>
+          <div className="card-pad" style={{ marginTop: 64, background: T.gold, padding: "40px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 24 }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.15em", color: T.navy, textTransform: "uppercase", marginBottom: 6 }}>Community Open Days: — Monday - Saturday</div>
-              <div className="display" style={{ fontSize: 26, fontWeight: 700, color: T.navy }}>Explore Innovation Labs. Meet Creators. Experience Technology in Action.</div>
+              <div className="display" style={{ fontSize: "clamp(19px, 4.5vw, 26px)", fontWeight: 700, color: T.navy }}>Explore Innovation Labs. Meet Creators. Experience Technology in Action.</div>
             </div>
             <button className="btn-navy" style={{ whiteSpace: "nowrap", padding: "15px 32px" }} onClick={() => onNav("programs")}>Register Free →</button>
           </div>
@@ -1178,11 +1286,11 @@ function NewsSection() {
 
         {featured && (
           <FadeIn>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, background: T.navy, marginBottom: 24, overflow: "hidden" }}>
+            <div className="news-featured-grid" style={{ gap: 0, background: T.navy, marginBottom: 24, overflow: "hidden" }}>
               <div className="img-placeholder" style={{ aspectRatio: "4/3", background: `linear-gradient(135deg, ${T.navyMid}, ${T.navy})`, borderRight: `1px solid rgba(255,255,255,0.05)` }}>
                 <span style={{ fontSize: 64 }}>📰</span>
               </div>
-              <div style={{ padding: "40px 44px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <div className="card-pad" style={{ padding: "40px 44px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 16 }}>
                   <span className="tag" style={{ background: "rgba(201,151,58,0.15)", color: T.gold }}>{featured.cat}</span>
                   <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>{featured.date}</span>
@@ -1299,10 +1407,10 @@ function FMLiveSection() {
 
         {/* Programs / careers CTA — nav "Programs" scrolls here */}
         <FadeIn delay={0.1}>
-          <div id="programs" style={{ marginTop: 60, scrollMarginTop: 90, background: "rgba(201,151,58,0.08)", border: "1px solid rgba(201,151,58,0.2)", padding: "40px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 24 }}>
+          <div id="programs" className="card-pad" style={{ marginTop: 60, scrollMarginTop: 90, background: "rgba(201,151,58,0.08)", border: "1px solid rgba(201,151,58,0.2)", padding: "40px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 24 }}>
             <div>
               <div style={{ color: T.gold, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8 }}>Programs & Opportunities</div>
-              <div className="display" style={{ color: "#fff", fontSize: 22, fontWeight: 700 }}>Join the Swahilipot Team</div>
+              <div className="display" style={{ color: "#fff", fontSize: "clamp(18px, 4.5vw, 22px)", fontWeight: 700 }}>Join the Swahilipot Team</div>
               <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, marginTop: 8 }}>  Explore career, internship, and volunteer opportunities at Swahilipot Hub.</p>
 
             </div>
@@ -1371,7 +1479,7 @@ function AdmissionsSection() {
           <FadeIn>
             <div>
               {/* Entry requirements */}
-              <div style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "36px 36px", marginBottom: 24 }}>
+              <div className="card-pad" style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "36px 36px", marginBottom: 24 }}>
                 <div className="display" style={{ fontSize: 20, fontWeight: 700, color: T.navy, marginBottom: 20 }}>Entry Requirements</div>
                 {[
                   ["Minimum Academic Entry", "KCSE Grade C- (minus) or equivalent qualification", "✅"],
@@ -1392,7 +1500,7 @@ function AdmissionsSection() {
               </div>
 
               {/* Fees */}
-              <div style={{ background: T.navy, padding: "28px 36px" }}>
+              <div className="card-pad" style={{ background: T.navy, padding: "28px 36px" }}>
                 <div className="display" style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 20 }}>Tuition Fees 2026</div>
                 {PROGRAMMES.slice(0, 4).map(p => (
                   <div key={p.code} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -1408,7 +1516,7 @@ function AdmissionsSection() {
           </FadeIn>
 
           <FadeIn delay={0.15}>
-            <div style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "36px 36px" }}>
+            <div className="card-pad" style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "36px 36px" }}>
               {submitted ? (
                 <div className="fade-in-anim" style={{ textAlign: "center", padding: "32px 0" }}>
                   <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
@@ -1527,7 +1635,7 @@ function ImpactsSection() {
           {/* LEFT — Success stories */}
           <div>
             <FadeIn>
-              <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderLeft: `4px solid ${T.gold}`, padding: "44px 48px" }}>
+              <div className="card-pad" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderLeft: `4px solid ${T.gold}`, padding: "44px 48px" }}>
                 <div style={{ color: T.gold, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 16 }}>{SUCCESS_STORIES[active].title}</div>
                 <blockquote className="display" style={{ fontSize: "clamp(17px,1.8vw,22px)", fontWeight: 400, fontStyle: "italic", color: "rgba(255,255,255,0.85)", lineHeight: 1.7, marginBottom: 32 }}>
                   "{SUCCESS_STORIES[active].quote}"
@@ -1567,9 +1675,9 @@ function ImpactsSection() {
           {/* RIGHT — Impact numbers + report download */}
           <div>
             <FadeIn delay={0.1}>
-              <div style={{ background: "rgba(201,151,58,0.08)", border: "1px solid rgba(201,151,58,0.25)", padding: "36px 40px" }}>
+              <div className="card-pad" style={{ background: "rgba(201,151,58,0.08)", border: "1px solid rgba(201,151,58,0.25)", padding: "36px 40px" }}>
                 <div style={{ color: T.gold, fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 8 }}>By the Numbers</div>
-                <div className="display" style={{ color: "#fff", fontSize: 26, fontWeight: 700, marginBottom: 12 }}>Impact Report</div>
+                <div className="display" style={{ color: "#fff", fontSize: "clamp(21px, 5vw, 26px)", fontWeight: 700, marginBottom: 12 }}>Impact Report</div>
                 <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, lineHeight: 1.75, marginBottom: 28 }}>
                   Our annual impact reports showcase the measurable change we're making in communities across East Africa.
                 </p>
@@ -1577,7 +1685,7 @@ function ImpactsSection() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 28 }}>
                   {IMPACT_STATS.map(s => (
                     <div key={s.label} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)", padding: "20px 18px", textAlign: "center" }}>
-                      <div className="display" style={{ color: "#fff", fontSize: 30, fontWeight: 700, marginBottom: 6 }}>{s.value}</div>
+                      <div className="display" style={{ color: "#fff", fontSize: "clamp(23px, 6vw, 30px)", fontWeight: 700, marginBottom: 6 }}>{s.value}</div>
                       <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 11, lineHeight: 1.55 }}>{s.label}</div>
                     </div>
                   ))}
@@ -1663,19 +1771,59 @@ function ContactSection() {
   const [msg, setMsg] = useState({ name: "", email: "", phone: "", type: "General Enquiry", body: "" });
   const upd = (k, v) => setMsg(m => ({ ...m, [k]: v }));
 
+  const [sending, setSending] = useState(false);
+  const [sentVia, setSentVia] = useState("direct"); // "direct" | "mailto"
+
   /*
-   * Sends the message to Swahilipot's main email. With no backend on this
-   * site, we open the visitor's email app pre-addressed to
-   * info@swahilipothub.co.ke with everything filled in — they just hit send.
+   * Sends the message to Swahilipot's main email (SWAHILIPOT_EMAIL).
+   *
+   * Primary path: FormSubmit (https://formsubmit.co) — a free relay that
+   * emails form submissions to the address in the URL. No account or API key.
+   * ONE-TIME SETUP: the very FIRST submission triggers an activation email
+   * to SWAHILIPOT_EMAIL's inbox; someone must click "Activate" in it once.
+   * After that, every submission lands in the inbox automatically.
+   *
+   * Fallback: if the network call fails (offline, blocked, etc.), we open
+   * the visitor's email app pre-addressed instead, so no message is lost.
+   *
+   * TIP FOR TESTING: temporarily change SWAHILIPOT_EMAIL above to your own
+   * address, submit the form, click the activation link FormSubmit sends
+   * you, then submit again — the message will arrive in your inbox.
    */
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!msg.name || !msg.email || !msg.body) return;
-    const subject = encodeURIComponent(`[Website] ${msg.type} — ${msg.name}`);
-    const body = encodeURIComponent(
-      `Name: ${msg.name}\nEmail: ${msg.email}\nPhone: ${msg.phone || "—"}\nEnquiry type: ${msg.type}\n\n${msg.body}`
-    );
-    window.location.href = `mailto:${SWAHILIPOT_EMAIL}?subject=${subject}&body=${body}`;
-    setSent(true);
+    setSending(true);
+    try {
+      const res = await fetch(`https://formsubmit.co/ajax/${SWAHILIPOT_EMAIL}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          name: msg.name,
+          email: msg.email,
+          phone: msg.phone || "—",
+          enquiry_type: msg.type,
+          message: msg.body,
+          _subject: `[Website] ${msg.type} — ${msg.name}`,
+          _template: "table",
+          _captcha: "false",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === "false" || data.success === false) throw new Error("relay failed");
+      setSentVia("direct");
+      setSent(true);
+    } catch (err) {
+      console.warn("FormSubmit failed, falling back to mailto:", err);
+      const subject = encodeURIComponent(`[Website] ${msg.type} — ${msg.name}`);
+      const body = encodeURIComponent(
+        `Name: ${msg.name}\nEmail: ${msg.email}\nPhone: ${msg.phone || "—"}\nEnquiry type: ${msg.type}\n\n${msg.body}`
+      );
+      window.location.href = `mailto:${SWAHILIPOT_EMAIL}?subject=${subject}&body=${body}`;
+      setSentVia("mailto");
+      setSent(true);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -1743,17 +1891,21 @@ function ContactSection() {
           </FadeIn>
           <FadeIn delay={0.15}>
             {sent ? (
-              <div style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "48px 40px", textAlign: "center" }} className="fade-in-anim">
+              <div style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "48px 40px", textAlign: "center" }} className="fade-in-anim card-pad">
                 <div style={{ fontSize: 48, marginBottom: 16 }}>✉</div>
-                <div className="display" style={{ fontSize: 22, fontWeight: 700, color: T.navy, marginBottom: 12 }}>Almost There!</div>
+                <div className="display" style={{ fontSize: "clamp(18px, 4.5vw, 22px)", fontWeight: 700, color: T.navy, marginBottom: 12 }}>
+                  {sentVia === "direct" ? "Message Sent!" : "Almost There!"}
+                </div>
                 <p style={{ color: T.textMuted, fontSize: 14, lineHeight: 1.75, marginBottom: 24 }}>
-                  Your email app has opened with your message addressed to <strong>{SWAHILIPOT_EMAIL}</strong> — just press send there to deliver it. For urgent matters call +254 11 4635505.
+                  {sentVia === "direct"
+                    ? <>Your message has been delivered to <strong>{SWAHILIPOT_EMAIL}</strong>. We'll get back to you as soon as we can. For urgent matters call +254 11 4635505.</>
+                    : <>We couldn't send automatically, so your email app has opened with your message addressed to <strong>{SWAHILIPOT_EMAIL}</strong> — just press send there to deliver it.</>}
                 </p>
                 <button className="btn-outline" onClick={() => { setSent(false); setMsg({ name: "", email: "", phone: "", type: "General Enquiry", body: "" }); }}>Write Another Message</button>
               </div>
             ) : (
-              <div style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "40px 40px" }}>
-                <div className="display" style={{ fontSize: 20, fontWeight: 700, color: T.navy, marginBottom: 6 }}>Send Us a Message</div>
+              <div className="card-pad" style={{ background: "#fff", border: `1px solid ${T.border}`, padding: "40px 40px" }}>
+                <div className="display" style={{ fontSize: "clamp(17px, 4vw, 20px)", fontWeight: 700, color: T.navy, marginBottom: 6 }}>Send Us a Message</div>
                 <p style={{ color: T.textMuted, fontSize: 13, marginBottom: 24 }}>Your message goes straight to {SWAHILIPOT_EMAIL}.</p>
                 {[["Full Name *", "name", "text", "e.g. Amina Hassan"], ["Email Address *", "email", "email", "your@email.com"], ["Phone Number", "phone", "tel", "+254 700 000 000"]].map(([label, key, type, ph]) => (
                   <div key={key} style={{ marginBottom: 16 }}>
@@ -1779,8 +1931,8 @@ function ContactSection() {
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.textLight, marginBottom: 6 }}>Message *</label>
                   <textarea className="input-field" rows={5} placeholder="How can we help you?" style={{ resize: "vertical" }} value={msg.body} onChange={e => upd("body", e.target.value)} />
                 </div>
-                <button className="btn-primary" style={{ width: "100%", textAlign: "center", fontSize: 14, padding: "15px" }} onClick={handleSend}>
-                  Send Message →
+                <button className="btn-primary" style={{ width: "100%", textAlign: "center", fontSize: 14, padding: "15px" }} onClick={handleSend} disabled={sending}>
+                  {sending ? "Sending…" : "Send Message →"}
                 </button>
                 <div style={{ display: "flex", gap: 24, marginTop: 24, paddingTop: 20, borderTop: `1px solid ${T.border}` }}>
                   <div style={{ flex: 1, textAlign: "center" }}>
@@ -1852,17 +2004,17 @@ function Footer({ onNav }) {
     <footer style={{ background: T.navy, padding: "72px 5% 32px" }}>
       <div style={{ maxWidth: 1320, margin: "0 auto" }}>
         {/* Top CTA strip */}
-        <div style={{ background: T.gold, padding: "28px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, marginBottom: 56 }}>
+        <div className="card-pad" style={{ background: T.gold, padding: "28px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, marginBottom: 56 }}>
           <div>
-            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, fontWeight: 700, color: T.navy }}>Be Part of the Change</div>
+            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: "clamp(17px, 4vw, 20px)", fontWeight: 700, color: T.navy }}>Be Part of the Change</div>
             <div style={{ color: "rgba(10,22,40,0.6)", fontSize: 14, marginTop: 4 }}>Join our programs in technology, arts and entrepreneurship — open to youth across the Coast region.</div>
           </div>
           <button className="btn-navy" onClick={() => onNav("contact")} style={{ whiteSpace: "nowrap" }}>Get in Touch →</button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
+        <div className="footer-grid">
           <div>
-            <div className="display" style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 4 }}>Swahilipot Hub Foundation</div>
+            <div className="display" style={{ fontSize: "clamp(17px, 4vw, 20px)", fontWeight: 700, color: "#fff", marginBottom: 4 }}>Swahilipot Hub Foundation</div>
             <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 20 }}>Old Town, Mombasa, Kenya · Est. 2016</div>
             <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, lineHeight: 1.8, maxWidth: 280 }}>
               A technology, creatives and heritage space empowering youth across Kenya's coastal region through digital skills, entrepreneurship, arts and community-driven innovation.
@@ -1922,7 +2074,7 @@ function Footer({ onNav }) {
             </div>
           ))}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 24, gap: 24, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="footer-bottom" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 24 }}>
           <div style={{ color: "rgba(255,255,255,0.2)", fontSize: 12 }}>
            © 2026 Swahilipot Hub Foundation. Registered Non-Profit Organization, Mombasa, Kenya. All Rights Reserved.
           </div>
@@ -2005,6 +2157,7 @@ function Navbar({ onNav, currentSection, navigate }) {
           padding: "0",
         }}>
         <div
+          className="nav-wrap"
           style={{
             maxWidth: 1800,
             width: "100%",
@@ -2012,30 +2165,22 @@ function Navbar({ onNav, currentSection, navigate }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 16,
           }}>
-          <div
-            onClick={() => onNav("home")}
-            style={{
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 50,
-            }}
-          >
+          <div className="nav-brand" onClick={() => onNav("home")}>
             <img
               src="/swahilipot-logo.png"
               alt="Swahilipot Hub Foundation"
               style={{
                 height: 40,
                 width: "auto",
-                marginRight: "30px",
                 objectFit: "contain",
               }}
             />
 
             <div>
               <div
-                className="display"
+                className="display nav-brand-title"
                 style={{
                   fontSize: 24,
                   fontWeight: 1000,
@@ -2043,10 +2188,11 @@ function Navbar({ onNav, currentSection, navigate }) {
                   lineHeight: 1.1,
                 }}
               >
-                Swahilipot Hub
+                
               </div>
 
               <div
+                className="nav-brand-sub"
                 style={{
                   fontSize: 9,
                   letterSpacing: "0.22em",
@@ -2054,11 +2200,11 @@ function Navbar({ onNav, currentSection, navigate }) {
                   color: T.gold,
                 }}
               >
-                Foundation · Mombasa
+               
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+          <div className="nav-links-desktop">
             {NAV_SECTIONS.filter((n) => n && n !== "Home").map((n) => (
               <a
                 key={n}
@@ -2072,8 +2218,9 @@ function Navbar({ onNav, currentSection, navigate }) {
               </a>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
             <a
+              className="nav-login"
               onClick={() => navigate("/login")}
               style={{
                 color: "rgba(255,255,255,0.5)",
@@ -2081,14 +2228,21 @@ function Navbar({ onNav, currentSection, navigate }) {
                 textDecoration: "none",
                 padding: "8px 14px",
                 border: "1px solid rgba(255,255,255,0.1)",
+                cursor: "pointer",
               }}>
               Login
             </a>
             <button
-              className="btn-primary"
+              className="btn-primary nav-events"
               onClick={() => window.open("https://www.swahilipothub.co.ke/events", "_blank")}
               style={{ padding: "9px 18px", fontSize: 12 }}>
               Events
+            </button>
+            <button
+              className="nav-burger"
+              aria-label="Open menu"
+              onClick={() => setMobileOpen(true)}>
+              ☰
             </button>
           </div>
         </div>
@@ -2134,6 +2288,15 @@ function Navbar({ onNav, currentSection, navigate }) {
               setMobileOpen(false);
             }}>
             Events
+          </button>
+          <button
+            className="btn-outline-white"
+            style={{ marginTop: 10, padding: "13px" }}
+            onClick={() => {
+              navigate("/login");
+              setMobileOpen(false);
+            }}>
+            Login
           </button>
         </div>
       )}
