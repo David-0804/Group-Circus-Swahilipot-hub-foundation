@@ -44,7 +44,7 @@ const RadioPage = lazy(() => import("./pages/radio/RadioPage"));
 const VideographyPage = lazy(
 	() => import("./pages/videography/VideographyPage"),
 );
-const CallsPage = lazy(() => import("./pages/calls/CallsPage"));
+const CallsPage = lazy(() => import("./components/layout/calls/CallsPage"));
 
 // ── Digital services ──────────────────────────────────────────────────────────
 const SubscriptionsPage = lazy(
@@ -63,6 +63,9 @@ const FinancePage = lazy(() => import("./pages/admin/FinancePage"));
 const UserManagement = lazy(() => import("./pages/admin/UserManagementPage"));
 const SettingsPage = lazy(() => import("./pages/admin/SettingsPage"));
 
+// ── Landing ───────────────────────────────────────────────────────────────────
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+
 // ── System ────────────────────────────────────────────────────────────────────
 const NotificationsPage = lazy(
 	() => import("./pages/notifications/NotificationsPage"),
@@ -80,6 +83,12 @@ const queryClient = new QueryClient({
 		},
 	},
 });
+
+function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+	const { isAuthenticated } = useAuthStore();
+	if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+	return <>{children}</>;
+}
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
 	const { isAuthenticated } = useAuthStore();
@@ -121,7 +130,22 @@ export default function App() {
 				<Suspense fallback={<LoadingScreen />}>
 					<Routes>
 						{/* ── Public ─────────────────────────────────────────────── */}
-						<Route path="/login" element={<LoginPage />} />
+						<Route
+							path="/"
+							element={
+								<PublicOnlyRoute>
+									<LandingPage />
+								</PublicOnlyRoute>
+							}
+						/>
+						<Route
+							path="/login"
+							element={
+								<PublicOnlyRoute>
+									<LoginPage />
+								</PublicOnlyRoute>
+							}
+						/>
 						<Route path="/mfa" element={<MFAPage />} />
 						<Route path="/verify/:code" element={<VerifyPage />} />{" "}
 						{/* ── Protected (requires auth) ──────────────────────────── */}
@@ -131,8 +155,6 @@ export default function App() {
 									<AppLayout />
 								</PrivateRoute>
 							}>
-							<Route index element={<Navigate to="/dashboard" replace />} />
-
 							{/* Core */}
 							<Route path="/dashboard" element={<RoleDashboard />} />
 							<Route path="/profile" element={<ProfilePage />} />
@@ -171,7 +193,7 @@ export default function App() {
 						</Route>
 						<Route path="/verify/:code" element={<VerifyPage />} />
 						{/* Catch-all */}
-						<Route path="*" element={<Navigate to="/dashboard" replace />} />
+						<Route path="*" element={<Navigate to="/" replace />} />
 					</Routes>
 				</Suspense>
 			</BrowserRouter>
