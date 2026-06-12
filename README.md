@@ -1,4 +1,4 @@
-# Nexus Enterprise Management System
+# Swahilipot Management System Open a browser preview of my website.
 
 **Version:** 1.0.0 — Production Ready  
 **Stack:** React 18 + TypeScript + TailwindCSS / Django 5 + PostgreSQL + Redis  
