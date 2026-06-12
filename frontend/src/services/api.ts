@@ -1,0 +1,649 @@
+// Nexus Enterprise — Complete API Service Layer
+// Every endpoint used by every page
+
+import axios, { AxiosInstance } from "axios";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+const BASE_URL = "http://127.0.0.1:8000/api/v1";
+
+// ── Axios instance ─────────────────────────────────────────────────────────
+export const api: AxiosInstance = axios.create({
+	baseURL: BASE_URL,
+	headers: { "Content-Type": "application/json" },
+	timeout: 30000,
+});
+
+// Attach JWT to every request
+api.interceptors.request.use((config) => {
+	const token = useAuthStore.getState().accessToken;
+	console.log("TOKEN:", token);
+	if (token) config.headers.Authorization = `Bearer ${token}`;
+	return config;
+});
+
+// Auto-refresh on 401
+api.interceptors.response.use(
+	(res) => res,
+	async (error) => {
+		const original = error.config;
+		if (error.response?.status === 401 && !original._retry) {
+			original._retry = true;
+			try {
+				const refresh = useAuthStore.getState().refreshToken;
+				if (!refresh) throw new Error("No refresh token");
+				const { data } = await axios.post(BASE_URL + "/auth/refresh/", {
+					refresh,
+				});
+				useAuthStore.getState().setTokens(data.access, refresh);
+				original.headers.Authorization = "Bearer " + data.access;
+				return api(original);
+			} catch {
+				useAuthStore.getState().logout();
+				window.location.href = "/login";
+			}
+		}
+		return Promise.reject(error);
+	},
+);
+
+// ── Auth Store ─────────────────────────────────────────────────────────────
+export interface User {
+	id: string;
+	email: string;
+	first_name: string;
+	last_name: string;
+	full_name: string;
+	role: string;
+	role_display: string;
+	organisation: string | null;
+	organisation_name: string | null;
+	branch: string | null;
+	branch_name: string | null;
+	department: string | null;
+	department_name: string | null;
+	profile_photo: string | null;
+	mfa_enabled: boolean;
+	phone?: string;
+	bio?: string;
+	notification_email?: boolean;
+	notification_sms?: boolean;
+	notification_push?: boolean;
+	employee_id?: string;
+	emergency_contact_name?: string;
+	emergency_contact_phone?: string;
+	date_joined?: string;
+	last_login?: string;
+	is_active?: boolean;
+}
+
+interface AuthState {
+	user: User | null;
+	accessToken: string | null;
+	refreshToken: string | null;
+	mfaRequired: boolean;
+	isAuthenticated: boolean;
+	setAuth: (
+		user: User,
+		access: string,
+		refresh: string,
+		mfaRequired?: boolean,
+	) => void;
+	setTokens: (access: string, refresh: string) => void;
+	setUser: (user: User) => void;
+	logout: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+	persist(
+		(set) => ({
+			user: null,
+			accessToken: null,
+			refreshToken: null,
+			mfaRequired: false,
+			isAuthenticated: false,
+
+			setAuth: (user, access, refresh, mfaRequired = false) =>
+				set({
+					user,
+					accessToken: access,
+					refreshToken: refresh,
+					mfaRequired,
+					isAuthenticated: true,
+				}),
+
+			setTokens: (access, refresh) =>
+				set({ accessToken: access, refreshToken: refresh }),
+
+			setUser: (user) => set({ user }),
+
+			logout: () =>
+				set({
+					user: null,
+					accessToken: null,
+					refreshToken: null,
+					isAuthenticated: false,
+					mfaRequired: false,
+				}),
+		}),
+		{
+			name: "Nexus-auth",
+			partialize: (s) => ({
+				user: s.user,
+				accessToken: s.accessToken,
+				refreshToken: s.refreshToken,
+				isAuthenticated: s.isAuthenticated,
+			}),
+		},
+	),
+);
+
+// ── Helper ─────────────────────────────────────────────────────────────────
+const safeArray = (data: any): any[] => {
+	if (!data) return [];
+	if (Array.isArray(data)) return data;
+	if (Array.isArray(data.results)) return data.results;
+	return [];
+};
+
+// ── Auth ───────────────────────────────────────────────────────────────────
+export const authApi = {
+	login: (email: string, password: string) =>
+		axios.post(BASE_URL + "/auth/login/", { email, password }),
+	logout: (refresh: string) => api.post("/auth/logout/", { refresh }),
+	refresh: (refresh: string) =>
+		axios.post(BASE_URL + "/auth/refresh/", { refresh }),
+	verifyMfa: (token: string) => api.post("/auth/mfa/verify/", { token }),
+	profile: () => api.get("/accounts/profile/"),
+	updateProfile: (data: Partial<User>) => api.patch("/accounts/profile/", data),
+	updateProfileMultipart: (data: FormData) =>
+		api.patch("/accounts/profile/", data, {
+			headers: { "Content-Type": "multipart/form-data" },
+		}),
+	changePassword: (data: any) => api.post("/accounts/profile/password/", data),
+	mfaSetup: () => api.get("/accounts/mfa/setup/"),
+	mfaEnable: (token: string) => api.post("/accounts/mfa/setup/", { token }),
+	mfaDisable: (data: any) => api.post("/accounts/mfa/disable/", data),
+};
+
+// ── Users ──────────────────────────────────────────────────────────────────
+export const usersApi = {
+	list: (params?: any) => api.get("/accounts/users/", { params }),
+	detail: (id: string) => api.get("/accounts/users/" + id + "/"),
+	create: (data: any) => api.post("/accounts/users/", data),
+	update: (id: string, data: any) =>
+		api.patch("/accounts/users/" + id + "/", data),
+	deactivate: (id: string) => api.delete("/accounts/users/" + id + "/"),
+	stats: () => api.get("/accounts/users/stats/"),
+	bulkImport: (file: File) => {
+		const form = new FormData();
+		form.append("file", file);
+		return api.post("/accounts/users/bulk-import/", form, {
+			headers: { "Content-Type": "multipart/form-data" },
+		});
+	},
+	sessions: () => api.get("/accounts/sessions/"),
+	revokeSession: (id: string) =>
+		api.post("/accounts/sessions/" + id + "/revoke/"),
+	auditLog: (params?: any) => api.get("/accounts/audit-log/", { params }),
+};
+
+// ── HR / Organisation ──────────────────────────────────────────────────────
+export const hrApi = {
+	departments: (params?: any) => api.get("/accounts/departments/", { params }),
+	createDept: (data: any) => api.post("/accounts/departments/", data),
+	updateDept: (id: string, data: any) =>
+		api.patch("/accounts/departments/" + id + "/", data),
+	branches: (params?: any) => api.get("/accounts/branches/", { params }),
+	createBranch: (data: any) => api.post("/accounts/branches/", data),
+	organisation: () => api.get("/accounts/organisation/"),
+	updateOrg: (data: any) => api.patch("/accounts/organisation/", data),
+	attacheePrograms: (params?: any) => api.get("/attachees/", { params }),
+	onboard: (data: any) => api.post("/attachees/onboard/", data),
+	offboard: (id: string, data: any) =>
+		api.post("/attachees/" + id + "/offboard/", data),
+};
+
+// ── Attendance ─────────────────────────────────────────────────────────────
+export const attendanceApi = {
+	checkIn: (data: any) => api.post("/attendance/check-in/", data),
+	checkOut: (data: any) => api.post("/attendance/check-out/", data),
+	today: () => api.get("/attendance/today/"),
+	history: (params?: any) => api.get("/attendance/history/", { params }),
+	leaveRequests: (params?: any) => api.get("/attendance/leave/", { params }),
+	submitLeave: (data: any) => api.post("/attendance/leave/", data),
+	reviewLeave: (id: string, data: any) =>
+		api.patch("/attendance/leave/" + id + "/", data),
+	violations: (params?: any) => api.get("/attendance/violations/", { params }),
+};
+
+// ── Tasks ──────────────────────────────────────────────────────────────────
+export const tasksApi = {
+	list: (params?: any) => api.get("/tasks/", { params }),
+	detail: (id: string) => api.get("/tasks/" + id + "/"),
+	create: (data: any) => api.post("/tasks/", data),
+	update: (id: string, data: any) => api.patch("/tasks/" + id + "/", data),
+	submit: (id: string, data: any) =>
+		api.post("/tasks/" + id + "/submit/", data),
+	review: (id: string, data: any) =>
+		api.post("/tasks/" + id + "/review/", data),
+	requestExtension: (id: string, data: any) =>
+		api.post("/tasks/" + id + "/extend/", data),
+	delete: (id: string) => api.delete("/tasks/" + id + "/"),
+};
+
+// ── Logbooks ───────────────────────────────────────────────────────────────
+export const logbooksApi = {
+	list: (params?: any) => api.get("/logbooks/", { params }),
+	detail: (id: string) => api.get("/logbooks/" + id + "/"),
+	create: (data: any) => api.post("/logbooks/", data),
+	entries: (logbookId: string, params?: any) =>
+		api.get("/logbooks/" + logbookId + "/entries/", { params }),
+	addEntry: (logbookId: string, data: any) =>
+		api.post("/logbooks/" + logbookId + "/entries/", data),
+	updateEntry: (logbookId: string, entryId: string, data: any) =>
+		api.patch("/logbooks/" + logbookId + "/entries/" + entryId + "/", data),
+	reviewEntry: (logbookId: string, entryId: string, data: any) =>
+		api.patch("/logbooks/" + logbookId + "/entries/" + entryId + "/", data),
+};
+
+// ── Evaluations ────────────────────────────────────────────────────────────
+export const evaluationsApi = {
+	list: (params?: any) => api.get("/evaluations/", { params }),
+	detail: (id: string) => api.get("/evaluations/" + id + "/"),
+	create: (data: any) => api.post("/evaluations/", data),
+	update: (id: string, data: any) =>
+		api.patch("/evaluations/" + id + "/", data),
+	submit: (id: string, data: any) =>
+		api.post("/evaluations/" + id + "/submit/", data),
+	templates: (params?: any) => api.get("/evaluations/templates/", { params }),
+};
+
+// ── Certificates ───────────────────────────────────────────────────────────
+export const certificatesApi = {
+	list: (params?: any) => api.get("/certificates/", { params }),
+	detail: (id: string) => api.get("/certificates/" + id + "/"),
+	generate: (data: any) => api.post("/certificates/generate/", data),
+	download: (id: string) =>
+		api.get("/certificates/" + id + "/download/", { responseType: "blob" }),
+	verify: (code: string) => api.get("/certificates/verify/" + code + "/"),
+	badges: (params?: any) => api.get("/certificates/badges/", { params }),
+};
+
+// ── Notifications ──────────────────────────────────────────────────────────
+export const notificationsApi = {
+	list: (params?: any) => api.get("/notifications/", { params }),
+	detail: (id: string) => api.get("/notifications/" + id + "/"),
+	markRead: (id: string) =>
+		api.patch("/notifications/" + id + "/", { read: true }),
+	markAllRead: () => api.post("/notifications/mark-all-read/"),
+	unreadCount: () => api.get("/notifications/unread-count/"),
+	preferences: () => api.get("/notifications/preferences/"),
+	updatePreferences: (data: any) =>
+		api.patch("/notifications/preferences/", data),
+};
+
+// ── Equipment ──────────────────────────────────────────────────────────────
+export const equipmentApi = {
+	list: (params?: any) => api.get("/equipment/", { params }),
+	detail: (id: string) => api.get("/equipment/" + id + "/"),
+	create: (data: any) => api.post("/equipment/", data),
+	update: (id: string, data: any) => api.patch("/equipment/" + id + "/", data),
+	delete: (id: string) => api.delete("/equipment/" + id + "/"),
+	stats: () => api.get("/equipment/stats/"),
+	categories: () => api.get("/equipment/categories/"),
+	checkoutRequests: (params?: any) =>
+		api.get("/equipment/checkout-requests/", { params }),
+	requestCheckout: (data: any) =>
+		api.post("/equipment/checkout-requests/", data),
+	approveCheckout: (id: string, data: any) =>
+		api.post("/equipment/checkout-requests/" + id + "/approve/", data),
+	returnEquipment: (id: string, data: any) =>
+		api.post("/equipment/checkout-requests/" + id + "/return/", data),
+	maintenance: (params?: any) => api.get("/equipment/maintenance/", { params }),
+	reportMaintenance: (data: any) => api.post("/equipment/maintenance/", data),
+	updateMaintenance: (id: string, data: any) =>
+		api.patch("/equipment/maintenance/" + id + "/", data),
+};
+
+// ── News CMS ───────────────────────────────────────────────────────────────
+export const newsApi = {
+	list: (params?: any) => api.get("/news/", { params }),
+	detail: (id: string) => api.get("/news/" + id + "/"),
+	create: (data: any) => api.post("/news/", data),
+	update: (id: string, data: any) => api.patch("/news/" + id + "/", data),
+	delete: (id: string) => api.delete("/news/" + id + "/"),
+	review: (id: string, data: any) => api.post("/news/" + id + "/review/", data),
+	categories: () => api.get("/news/categories/"),
+	published: (params?: any) => api.get("/news/published/", { params }),
+};
+
+// ── Radio ──────────────────────────────────────────────────────────────────
+export const radioApi = {
+	schedule: (params?: any) => api.get("/radio/schedule/", { params }),
+	createSlot: (data: any) => api.post("/radio/schedule/", data),
+	updateSlot: (id: string, data: any) =>
+		api.patch("/radio/schedule/" + id + "/", data),
+	deleteSlot: (id: string) => api.delete("/radio/schedule/" + id + "/"),
+	submitShowPlan: (id: string, data: any) =>
+		api.post("/radio/schedule/" + id + "/show-plan/", data),
+	frequencies: () => api.get("/radio/frequencies/"),
+	createFreq: (data: any) => api.post("/radio/frequencies/", data),
+	shows: () => api.get("/radio/shows/"),
+	createShow: (data: any) => api.post("/radio/shows/", data),
+	mySchedule: () => api.get("/radio/my-schedule/"),
+};
+
+// ── FM Report ──────────────────────────────────────────────────────────────
+export const fmReportApi = {
+	stations: () => api.get("/fm-report/stations/"),
+	stationDetail: (id: string) => api.get("/fm-report/stations/" + id + "/"),
+	createStation: (data: any) => api.post("/fm-report/stations/", data),
+	updateStation: (id: string, data: any) =>
+		api.patch("/fm-report/stations/" + id + "/", data),
+	reportDown: (stationId: string, data: any) =>
+		api.post("/fm-report/stations/" + stationId + "/down/", data),
+	reportRestored: (stationId: string, data: any) =>
+		api.post("/fm-report/stations/" + stationId + "/restored/", data),
+	outageHistory: (stationId: string, params?: any) =>
+		api.get("/fm-report/stations/" + stationId + "/outages/", { params }),
+	allOutages: (params?: any) => api.get("/fm-report/outages/", { params }),
+	exportOutages: (params?: any) =>
+		api.get("/fm-report/outages/export/", { params, responseType: "blob" }),
+};
+
+// ── Emergency ──────────────────────────────────────────────────────────────
+export const emergencyApi = {
+	trigger: (data: any) => api.post("/fm-report/emergency-alert/", data),
+	list: () => api.get("/fm-report/emergency-alert/"),
+	acknowledge: (id: string) =>
+		api.post("/fm-report/emergency-alert/" + id + "/acknowledge/"),
+	resolve: (id: string, data: any) =>
+		api.patch("/fm-report/emergency-alert/" + id + "/", data),
+};
+
+// ── Subscriptions ──────────────────────────────────────────────────────────
+export const subscriptionsApi = {
+	list: (params?: any) => api.get("/subscriptions/", { params }),
+	detail: (id: string) => api.get("/subscriptions/" + id + "/"),
+	create: (data: any) => api.post("/subscriptions/", data),
+	update: (id: string, data: any) =>
+		api.patch("/subscriptions/" + id + "/", data),
+	requestSeat: (id: string, data: any) =>
+		api.post("/subscriptions/" + id + "/request/", data),
+	seatRequests: (params?: any) =>
+		api.get("/subscriptions/seat-requests/", { params }),
+	allocateSeat: (requestId: string, data: any) =>
+		api.post("/subscriptions/seat-requests/" + requestId + "/allocate/", data),
+	revokeSeat: (allocationId: string) =>
+		api.post("/subscriptions/allocations/" + allocationId + "/revoke/"),
+};
+
+// ── Wi-Fi ──────────────────────────────────────────────────────────────────
+export const wifiApi = {
+	list: (params?: any) => api.get("/wifi/", { params }),
+	detail: (id: string) => api.get("/wifi/" + id + "/"),
+	request: (data: any) => api.post("/wifi/", data),
+	approve: (id: string, data: any) =>
+		api.post("/wifi/" + id + "/approve/", data),
+	revoke: (id: string) => api.post("/wifi/" + id + "/revoke/"),
+	activeGrants: () => api.get("/wifi/active/"),
+};
+
+// ── Feedback ───────────────────────────────────────────────────────────────
+export const feedbackApi = {
+	list: (params?: any) => api.get("/feedback/", { params }),
+	detail: (id: string) => api.get("/feedback/" + id + "/"),
+	submit: (data: any) => api.post("/feedback/", data),
+	update: (id: string, data: any) => api.patch("/feedback/" + id + "/", data),
+	stats: () => api.get("/feedback/stats/"),
+};
+
+// ── File Transfer ──────────────────────────────────────────────────────────
+export const fileTransferApi = {
+	upload: (file: File, onProgress?: (p: number) => void) => {
+		const form = new FormData();
+		form.append("file", file);
+		return api.post("/file-transfer/", form, {
+			headers: { "Content-Type": "multipart/form-data" },
+			onUploadProgress: (e: any) =>
+				onProgress?.(Math.round((e.loaded / (e.total || 1)) * 100)),
+		});
+	},
+	list: (params?: any) => api.get("/file-transfer/", { params }),
+	download: (token: string) =>
+		api.get("/file-transfer/download/" + token + "/", { responseType: "blob" }),
+	delete: (id: string) => api.delete("/file-transfer/" + id + "/"),
+};
+
+// ── Videography ────────────────────────────────────────────────────────────
+export const videographyApi = {
+	bookings: (params?: any) => api.get("/videography/", { params }),
+	detail: (id: string) => api.get("/videography/" + id + "/"),
+	create: (data: any) => api.post("/videography/", data),
+	update: (id: string, data: any) =>
+		api.patch("/videography/" + id + "/", data),
+	approve: (id: string, data: any) =>
+		api.post("/videography/" + id + "/approve/", data),
+	uploadFootage: (id: string, file: File) => {
+		const form = new FormData();
+		form.append("footage", file);
+		return api.post("/videography/" + id + "/footage/", form, {
+			headers: { "Content-Type": "multipart/form-data" },
+		});
+	},
+	footage: (params?: any) => api.get("/videography/footage/", { params }),
+};
+
+// ── Calls ──────────────────────────────────────────────────────────────────
+export const callsApi = {
+	list: (params?: any) => api.get("/calls/", { params }),
+	detail: (id: string) => api.get("/calls/" + id + "/"),
+	playback: (id: string) => api.get("/calls/" + id + "/playback/"),
+	stats: (params?: any) => api.get("/calls/stats/", { params }),
+	hardware: (params?: any) => api.get("/calls/hardware/", { params }),
+	reportFault: (data: any) => api.post("/calls/hardware/", data),
+};
+
+// ── Finance ────────────────────────────────────────────────────────────────
+export const financeApi = {
+	budgets: (params?: any) => api.get("/finance/budgets/", { params }),
+	createBudget: (data: any) => api.post("/finance/budgets/", data),
+	expenses: (params?: any) => api.get("/finance/expenses/", { params }),
+	submitExpense: (data: any) => api.post("/finance/expenses/", data),
+	approveExpense: (id: string, data: any) =>
+		api.post("/finance/expenses/" + id + "/approve/", data),
+	invoices: (params?: any) => api.get("/finance/invoices/", { params }),
+	stipends: (params?: any) => api.get("/finance/stipends/", { params }),
+	cashFlow: (params?: any) => api.get("/finance/cash-flow/", { params }),
+	reports: (params?: any) => api.get("/finance/reports/", { params }),
+};
+
+// ── Analytics ──────────────────────────────────────────────────────────────
+export const analyticsApi = {
+	dashboard: () => api.get("/analytics/dashboard/"),
+	attendance: (params?: any) => api.get("/analytics/attendance/", { params }),
+	tasks: (params?: any) => api.get("/analytics/tasks/", { params }),
+	internship: (params?: any) => api.get("/analytics/internship/", { params }),
+	broadcast: (params?: any) => api.get("/analytics/broadcast/", { params }),
+	exportReport: (module: string, params?: any) =>
+		api.get("/analytics/export/" + module + "/", {
+			params,
+			responseType: "blob",
+		}),
+};
+
+// ── Admin Dashboard ────────────────────────────────────────────────────────
+export const adminDashboardApi = {
+	overview: () => api.get("/admin-dashboard/overview/"),
+	alerts: () => api.get("/admin-dashboard/alerts/"),
+	recentActivity: () => api.get("/admin-dashboard/activity/"),
+	moduleStats: (module: string) =>
+		api.get("/admin-dashboard/stats/" + module + "/"),
+	exportModule: (module: string, params?: any) =>
+		api.get("/admin-dashboard/export/" + module + "/", {
+			params,
+			responseType: "blob",
+		}),
+};
+
+// ── Projects ───────────────────────────────────────────────────────────────
+export const projectsApi = {
+	list: (params?: any) => api.get("/projects/", { params }),
+	detail: (id: string) => api.get("/projects/" + id + "/"),
+	create: (data: any) => api.post("/projects/", data),
+	update: (id: string, data: any) => api.patch("/projects/" + id + "/", data),
+	submit: (id: string, data: any) =>
+		api.post("/projects/" + id + "/submit/", data),
+	review: (id: string, data: any) =>
+		api.post("/projects/" + id + "/review/", data),
+	versions: (id: string) => api.get("/projects/" + id + "/versions/"),
+	feedback: (id: string, data: any) =>
+		api.post("/projects/" + id + "/feedback/", data),
+};
+
+// ── Documents ──────────────────────────────────────────────────────────────
+export const documentsApi = {
+	list: (params?: any) => api.get("/documents/", { params }),
+	detail: (id: string) => api.get("/documents/" + id + "/"),
+	upload: (file: File, meta: any) => {
+		const form = new FormData();
+		form.append("file", file);
+		Object.keys(meta).forEach((k) => form.append(k, meta[k]));
+		return api.post("/documents/", form, {
+			headers: { "Content-Type": "multipart/form-data" },
+		});
+	},
+	delete: (id: string) => api.delete("/documents/" + id + "/"),
+	download: (id: string) =>
+		api.get("/documents/" + id + "/download/", { responseType: "blob" }),
+};
+
+// ── Knowledge Base ─────────────────────────────────────────────────────────
+export const knowledgeApi = {
+	list: (params?: any) => api.get("/knowledge/", { params }),
+	detail: (id: string) => api.get("/knowledge/" + id + "/"),
+	create: (data: any) => api.post("/knowledge/", data),
+	update: (id: string, data: any) => api.patch("/knowledge/" + id + "/", data),
+	search: (q: string) => api.get("/knowledge/", { params: { search: q } }),
+};
+
+// ── HSE ────────────────────────────────────────────────────────────────────
+export const hseApi = {
+	incidents: (params?: any) => api.get("/hse/", { params }),
+	reportIncident: (data: any) => api.post("/hse/", data),
+	updateIncident: (id: string, data: any) =>
+		api.patch("/hse/" + id + "/", data),
+	inspections: (params?: any) => api.get("/hse/inspections/", { params }),
+	riskAssessments: (params?: any) => api.get("/hse/risks/", { params }),
+};
+
+// ── Facilities ─────────────────────────────────────────────────────────────
+export const facilitiesApi = {
+	list: (params?: any) => api.get("/facilities/", { params }),
+	roomBookings: (params?: any) => api.get("/facilities/bookings/", { params }),
+	bookRoom: (data: any) => api.post("/facilities/bookings/", data),
+	maintenance: (params?: any) =>
+		api.get("/facilities/maintenance/", { params }),
+};
+
+// ── Security ───────────────────────────────────────────────────────────────
+export const securityApi = {
+	incidents: (params?: any) => api.get("/security/", { params }),
+	report: (data: any) => api.post("/security/", data),
+	visitors: (params?: any) => api.get("/security/visitors/", { params }),
+	patrols: (params?: any) => api.get("/security/patrols/", { params }),
+};
+
+// ── University Portal ──────────────────────────────────────────────────────
+export const universityApi = {
+	students: (params?: any) => api.get("/university/", { params }),
+	placements: (params?: any) => api.get("/university/placements/", { params }),
+	verify: (id: string) => api.get("/university/verify/" + id + "/"),
+	stats: () => api.get("/university/stats/"),
+};
+
+// ── Workflow ───────────────────────────────────────────────────────────────
+export const workflowApi = {
+	list: (params?: any) => api.get("/workflow/", { params }),
+	detail: (id: string) => api.get("/workflow/" + id + "/"),
+	approve: (id: string, data: any) =>
+		api.post("/workflow/" + id + "/approve/", data),
+	reject: (id: string, data: any) =>
+		api.post("/workflow/" + id + "/reject/", data),
+	delegate: (id: string, data: any) =>
+		api.post("/workflow/" + id + "/delegate/", data),
+};
+
+// ── Procurement ────────────────────────────────────────────────────────────
+export const procurementApi = {
+	requests: (params?: any) => api.get("/procurement/", { params }),
+	create: (data: any) => api.post("/procurement/", data),
+	approve: (id: string, data: any) =>
+		api.post("/procurement/" + id + "/approve/", data),
+	vendors: (params?: any) => api.get("/procurement/vendors/", { params }),
+	inventory: (params?: any) => api.get("/procurement/inventory/", { params }),
+};
+
+// ── ICT ────────────────────────────────────────────────────────────────────
+export const ictApi = {
+	assets: (params?: any) => api.get("/ict/", { params }),
+	createAsset: (data: any) => api.post("/ict/", data),
+	helpdesk: (params?: any) => api.get("/ict/helpdesk/", { params }),
+	submitTicket: (data: any) => api.post("/ict/helpdesk/", data),
+	licenses: (params?: any) => api.get("/ict/licenses/", { params }),
+	incidents: (params?: any) => api.get("/ict/incidents/", { params }),
+};
+
+// ── Communications / PR ────────────────────────────────────────────────────
+export const communicationsApi = {
+	announcements: (params?: any) => api.get("/communications/", { params }),
+	create: (data: any) => api.post("/communications/", data),
+	campaigns: (params?: any) =>
+		api.get("/communications/campaigns/", { params }),
+	pressReleases: (params?: any) =>
+		api.get("/communications/press/", { params }),
+};
+
+// ── Legal ──────────────────────────────────────────────────────────────────
+export const legalApi = {
+	contracts: (params?: any) => api.get("/legal/", { params }),
+	create: (data: any) => api.post("/legal/", data),
+	ndas: (params?: any) => api.get("/legal/ndas/", { params }),
+	compliance: (params?: any) => api.get("/legal/compliance/", { params }),
+};
+
+// ── QA / QC ────────────────────────────────────────────────────────────────
+export const qcApi = {
+	inspections: (params?: any) => api.get("/qc/", { params }),
+	create: (data: any) => api.post("/qc/", data),
+	nonConformance: (params?: any) => api.get("/qc/non-conformance/", { params }),
+	metrics: (params?: any) => api.get("/qc/metrics/", { params }),
+};
+
+// ── Operations ─────────────────────────────────────────────────────────────
+export const operationsApi = {
+	kpis: (params?: any) => api.get("/operations/", { params }),
+	incidents: (params?: any) => api.get("/operations/incidents/", { params }),
+	report: (data: any) => api.post("/operations/incidents/", data),
+	workflows: (params?: any) => api.get("/operations/workflows/", { params }),
+};
+
+// ── Customer Service ───────────────────────────────────────────────────────
+export const customerServiceApi = {
+	tickets: (params?: any) => api.get("/customer-service/", { params }),
+	create: (data: any) => api.post("/customer-service/", data),
+	update: (id: string, data: any) =>
+		api.patch("/customer-service/" + id + "/", data),
+	surveys: (params?: any) => api.get("/customer-service/surveys/", { params }),
+	stats: () => api.get("/customer-service/stats/"),
+};
+
+// ── R&D ────────────────────────────────────────────────────────────────────
+export const rdApi = {
+	projects: (params?: any) => api.get("/rd/", { params }),
+	create: (data: any) => api.post("/rd/", data),
+	ideas: (params?: any) => api.get("/rd/ideas/", { params }),
+	submitIdea: (data: any) => api.post("/rd/ideas/", data),
+	patents: (params?: any) => api.get("/rd/patents/", { params }),
+};
