@@ -2,8 +2,12 @@
 __pycache__/
 *.py[codz]
 *$py.class
+<<<<<<< HEAD
 *.vscode
 .vscode
+=======
+
+>>>>>>> origin/main
 # C extensions
 *.so
 

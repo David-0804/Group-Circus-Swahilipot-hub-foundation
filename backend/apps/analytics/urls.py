@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """Nexus Analytics — URLs (v3 — full export engine)"""
 from django.urls import path
 from .views import (
@@ -42,3 +43,16 @@ urlpatterns = [
     path('exports/<str:fmt>/',              AnalyticsExportView.as_view(),     name='analytics-export-fmt'),
     path('exports/<str:fmt>/<str:module>/', AnalyticsExportView.as_view(),     name='analytics-export-fmt-module'),
 ]
+=======
+"""Nexus Analytics — URLs"""
+from django.urls import path
+from .views import (
+    AnalyticsDashboardView, AttendanceAnalyticsView, ExportView,
+)
+
+urlpatterns = [
+    path('dashboard/',          AnalyticsDashboardView.as_view(),   name='analytics-dashboard'),
+    path('attendance/',         AttendanceAnalyticsView.as_view(),  name='analytics-attendance'),
+    path('export/<str:module>/',ExportView.as_view(),               name='analytics-export'),
+]
+>>>>>>> origin/main

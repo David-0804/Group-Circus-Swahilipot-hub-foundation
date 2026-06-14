@@ -1,11 +1,22 @@
+<<<<<<< HEAD
 // Swahilipot — My Profile Page  (fixed)
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+=======
+// Swahilipot — My Profile Page
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+>>>>>>> origin/main
 import {
 	User,
 	Mail,
 	Phone,
+<<<<<<< HEAD
+=======
+	Building2,
+>>>>>>> origin/main
 	Shield,
 	Bell,
 	Key,
@@ -16,12 +27,16 @@ import {
 	Eye,
 	EyeOff,
 	Smartphone,
+<<<<<<< HEAD
 	QrCode,
+=======
+>>>>>>> origin/main
 } from "lucide-react";
 import { authApi, useAuthStore } from "../../services/api";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 
+<<<<<<< HEAD
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -64,6 +79,14 @@ export default function ProfilePage() {
 	};
 
 	// ── Password ─────────────────────────────────────────────────────────────
+=======
+export default function ProfilePage() {
+	const { user, setUser } = useAuthStore();
+	const qc = useQueryClient();
+	const [activeTab, setActiveTab] = useState<
+		"profile" | "security" | "notifications"
+	>("profile");
+>>>>>>> origin/main
 	const [showCurrentPw, setShowCurrentPw] = useState(false);
 	const [showNewPw, setShowNewPw] = useState(false);
 	const [pwForm, setPwForm] = useState({
@@ -73,6 +96,7 @@ export default function ProfilePage() {
 	});
 	const [pwLoading, setPwLoading] = useState(false);
 
+<<<<<<< HEAD
 	// ── 2FA setup dialog ──────────────────────────────────────────────────────
 	const [mfaLoading, setMfaLoading] = useState(false);
 	const [mfaQr, setMfaQr] = useState<string | null>(null); // base64 QR image
@@ -86,10 +110,13 @@ export default function ProfilePage() {
 	});
 
 	// ── React Hook Form ───────────────────────────────────────────────────────
+=======
+>>>>>>> origin/main
 	const {
 		register,
 		handleSubmit,
 		formState: { isDirty },
+<<<<<<< HEAD
 	} = useForm({
 		defaultValues: user || {},
 	});
@@ -178,6 +205,20 @@ export default function ProfilePage() {
 	});
 
 	// ── Password change ───────────────────────────────────────────────────────
+=======
+	} = useForm({ defaultValues: user || {} });
+
+	const updateMutation = useMutation({
+		mutationFn: (data: any) => authApi.updateProfile(data),
+		onSuccess: (res) => {
+			setUser(res.data);
+			qc.invalidateQueries({ queryKey: ["profile"] });
+			toast.success("Profile updated successfully");
+		},
+		onError: () => toast.error("Failed to update profile"),
+	});
+
+>>>>>>> origin/main
 	const handlePasswordChange = async () => {
 		if (pwForm.new_password !== pwForm.confirm) {
 			toast.error("New passwords do not match");
@@ -189,6 +230,7 @@ export default function ProfilePage() {
 		}
 		setPwLoading(true);
 		try {
+<<<<<<< HEAD
 			if (typeof (authApi as any).changePassword === "function") {
 				await (authApi as any).changePassword({
 					current_password: pwForm.current_password,
@@ -213,11 +255,19 @@ export default function ProfilePage() {
 				err?.response?.data?.detail ??
 					"Failed to change password — check your current password",
 			);
+=======
+			await authApi.profile(); // placeholder - would call change password endpoint
+			toast.success("Password changed successfully");
+			setPwForm({ current_password: "", new_password: "", confirm: "" });
+		} catch {
+			toast.error("Failed to change password — check current password");
+>>>>>>> origin/main
 		} finally {
 			setPwLoading(false);
 		}
 	};
 
+<<<<<<< HEAD
 	// ── 2FA ──────────────────────────────────────────────────────────────────
 	const handleToggle2FA = async () => {
 		setMfaLoading(true);
@@ -290,13 +340,18 @@ export default function ProfilePage() {
 	};
 
 	// ── Tabs ──────────────────────────────────────────────────────────────────
+=======
+>>>>>>> origin/main
 	const tabs = [
 		{ key: "profile", label: "Profile", icon: User },
 		{ key: "security", label: "Security", icon: Shield },
 		{ key: "notifications", label: "Notifications", icon: Bell },
 	] as const;
 
+<<<<<<< HEAD
 	// ── Render ────────────────────────────────────────────────────────────────
+=======
+>>>>>>> origin/main
 	return (
 		<div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
 			<div className="page-header">
@@ -311,6 +366,7 @@ export default function ProfilePage() {
 				</div>
 			</div>
 
+<<<<<<< HEAD
 			{/* ── Avatar + name card ─────────────────────────────────────────── */}
 			<div className="card flex items-center gap-5">
 				<div className="relative">
@@ -354,6 +410,19 @@ export default function ProfilePage() {
 					</label>
 				</div>
 
+=======
+			{/* Avatar + name card */}
+			<div className="card flex items-center gap-5">
+				<div className="relative">
+					<div className="w-20 h-20 rounded-2xl bg-gradient-Swahilipot flex items-center justify-center text-2xl font-bold text-white shadow-Swahilipot">
+						{user?.first_name?.[0]}
+						{user?.last_name?.[0]}
+					</div>
+					<button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-Swahilipot-600 flex items-center justify-center border-2 border-surface-card hover:bg-Swahilipot-700 transition-colors">
+						<Camera size={12} className="text-white" />
+					</button>
+				</div>
+>>>>>>> origin/main
 				<div className="flex-1">
 					<h2 className="text-xl font-semibold text-white">
 						{user?.full_name}
@@ -368,6 +437,7 @@ export default function ProfilePage() {
 							<span className="badge-slate">{user.department_name}</span>
 						)}
 					</div>
+<<<<<<< HEAD
 					{avatarPreview && (
 						<p className="text-xs text-amber-400 mt-1">
 							New photo selected — save profile to apply.
@@ -377,6 +447,12 @@ export default function ProfilePage() {
 			</div>
 
 			{/* ── Tabs ──────────────────────────────────────────────────────── */}
+=======
+				</div>
+			</div>
+
+			{/* Tabs */}
+>>>>>>> origin/main
 			<div className="flex gap-1 p-1 bg-surface-card border border-surface-border rounded-xl w-fit">
 				{tabs.map(({ key, label, icon: Icon }) => (
 					<button
@@ -395,7 +471,11 @@ export default function ProfilePage() {
 				))}
 			</div>
 
+<<<<<<< HEAD
 			{/* ── PROFILE TAB ───────────────────────────────────────────────── */}
+=======
+			{/* ── PROFILE TAB ── */}
+>>>>>>> origin/main
 			{activeTab === "profile" && (
 				<div className="card">
 					<h3 className="font-semibold text-white mb-5">
@@ -414,7 +494,10 @@ export default function ProfilePage() {
 								<input {...register("last_name")} className="input" />
 							</div>
 						</div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 						<div className="input-group">
 							<label className="input-label flex items-center gap-1.5">
 								<Mail size={12} />
@@ -430,7 +513,10 @@ export default function ProfilePage() {
 								Contact your administrator to change your email.
 							</p>
 						</div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 						<div className="input-group">
 							<label className="input-label flex items-center gap-1.5">
 								<Phone size={12} />
@@ -442,7 +528,10 @@ export default function ProfilePage() {
 								placeholder="+254 700 000 000"
 							/>
 						</div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 						<div className="input-group">
 							<label className="input-label">Bio</label>
 							<textarea
@@ -488,7 +577,11 @@ export default function ProfilePage() {
 				</div>
 			)}
 
+<<<<<<< HEAD
 			{/* ── SECURITY TAB ──────────────────────────────────────────────── */}
+=======
+			{/* ── SECURITY TAB ── */}
+>>>>>>> origin/main
 			{activeTab === "security" && (
 				<div className="space-y-5">
 					{/* Change Password */}
@@ -521,7 +614,10 @@ export default function ProfilePage() {
 									</button>
 								</div>
 							</div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 							<div className="input-group">
 								<label className="input-label">New Password</label>
 								<div className="relative">
@@ -541,7 +637,10 @@ export default function ProfilePage() {
 										{showNewPw ? <EyeOff size={15} /> : <Eye size={15} />}
 									</button>
 								</div>
+<<<<<<< HEAD
 								{/* Strength bar */}
+=======
+>>>>>>> origin/main
 								{pwForm.new_password && (
 									<div className="mt-2 flex gap-1">
 										{[8, 10, 12, 16].map((len) => (
@@ -562,7 +661,10 @@ export default function ProfilePage() {
 									</div>
 								)}
 							</div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 							<div className="input-group">
 								<label className="input-label">Confirm New Password</label>
 								<input
@@ -580,10 +682,15 @@ export default function ProfilePage() {
 									placeholder="••••••••••"
 								/>
 							</div>
+<<<<<<< HEAD
 
 							<div className="flex justify-end">
 								<button
 									type="button"
+=======
+							<div className="flex justify-end">
+								<button
+>>>>>>> origin/main
 									onClick={handlePasswordChange}
 									disabled={
 										pwLoading ||
@@ -597,7 +704,11 @@ export default function ProfilePage() {
 						</div>
 					</div>
 
+<<<<<<< HEAD
 					{/* Two-Factor Authentication */}
+=======
+					{/* MFA */}
+>>>>>>> origin/main
 					<div className="card">
 						<div className="flex items-center justify-between">
 							<div>
@@ -631,6 +742,7 @@ export default function ProfilePage() {
 								)}
 							</div>
 						</div>
+<<<<<<< HEAD
 
 						{/* QR setup dialog */}
 						{mfaQr && (
@@ -702,17 +814,31 @@ export default function ProfilePage() {
 								)}
 							</div>
 						)}
+=======
+						<div className="mt-4">
+							{!user?.mfa_enabled ? (
+								<button className="btn-primary btn-sm">Enable 2FA</button>
+							) : (
+								<button className="btn-danger btn-sm">Disable 2FA</button>
+							)}
+						</div>
+>>>>>>> origin/main
 					</div>
 				</div>
 			)}
 
+<<<<<<< HEAD
 			{/* ── NOTIFICATIONS TAB ─────────────────────────────────────────── */}
+=======
+			{/* ── NOTIFICATIONS TAB ── */}
+>>>>>>> origin/main
 			{activeTab === "notifications" && (
 				<div className="card">
 					<h3 className="font-semibold text-white mb-5">
 						Notification Preferences
 					</h3>
 					<div className="space-y-4">
+<<<<<<< HEAD
 						{(
 							[
 								{
@@ -736,6 +862,25 @@ export default function ProfilePage() {
 								field: keyof NotificationPrefs;
 							}[]
 						).map(({ label, sub, field }) => (
+=======
+						{[
+							{
+								label: "Email Notifications",
+								sub: "Receive alerts and updates via email",
+								field: "notification_email",
+							},
+							{
+								label: "SMS Notifications",
+								sub: "Receive critical alerts via SMS",
+								field: "notification_sms",
+							},
+							{
+								label: "Push Notifications",
+								sub: "Browser and mobile push alerts",
+								field: "notification_push",
+							},
+						].map(({ label, sub, field }) => (
+>>>>>>> origin/main
 							<div
 								key={field}
 								className="flex items-center justify-between p-4 bg-surface rounded-xl border border-surface-border">
@@ -746,6 +891,7 @@ export default function ProfilePage() {
 								<label className="relative inline-flex items-center cursor-pointer">
 									<input
 										type="checkbox"
+<<<<<<< HEAD
 										checked={notifPrefs[field]}
 										onChange={(e) =>
 											setNotifPrefs((p) => ({
@@ -753,6 +899,9 @@ export default function ProfilePage() {
 												[field]: e.target.checked,
 											}))
 										}
+=======
+										defaultChecked={(user as any)?.[field]}
+>>>>>>> origin/main
 										className="sr-only peer"
 									/>
 									<div className="w-11 h-6 bg-surface-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-Swahilipot-600" />
@@ -761,6 +910,7 @@ export default function ProfilePage() {
 						))}
 					</div>
 					<div className="flex justify-end mt-5">
+<<<<<<< HEAD
 						<button
 							type="button"
 							onClick={() => notifMutation.mutate(notifPrefs)}
@@ -768,6 +918,10 @@ export default function ProfilePage() {
 							className="btn-primary">
 							<Save size={14} />
 							{notifMutation.isPending ? "Saving..." : "Save Preferences"}
+=======
+						<button className="btn-primary">
+							<Save size={14} /> Save Preferences
+>>>>>>> origin/main
 						</button>
 					</div>
 				</div>

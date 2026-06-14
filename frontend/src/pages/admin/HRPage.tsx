@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 // NEXUS — HR Management Page (Full Suite) v2
 import { useState, useRef } from "react";
+=======
+// NEXUS — HR Management Page
+import { useState } from "react";
+>>>>>>> origin/main
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import {
@@ -11,10 +16,15 @@ import {
 	UserPlus,
 	GraduationCap,
 	Building2,
+<<<<<<< HEAD
+=======
+	BarChart3,
+>>>>>>> origin/main
 	CheckCircle,
 	Clock,
 	XCircle,
 	Calendar,
+<<<<<<< HEAD
 	X,
 	Phone,
 	MapPin,
@@ -34,13 +44,19 @@ import {
 	Filter,
 	Edit2,
 	Save,
+=======
+	Award,
+>>>>>>> origin/main
 } from "lucide-react";
 import {
 	hrApi,
 	usersApi,
 	attendanceApi,
 	evaluationsApi,
+<<<<<<< HEAD
 	financeApi,
+=======
+>>>>>>> origin/main
 	certificatesApi,
 } from "../../services/api";
 import { useAuthStore } from "../../services/api";
@@ -48,6 +64,7 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 
+<<<<<<< HEAD
 // ── All available roles for non-attachee staff ─────────────────────────────────
 const STAFF_ROLES = [
 	{ value: "admin", label: "Admin" },
@@ -1794,11 +1811,23 @@ function OrgSettingsModal({
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ══════════════════════════════════════════════════════════════════════════════
+=======
+const TABS = [
+	"overview",
+	"attachees",
+	"leave",
+	"evaluations",
+	"departments",
+] as const;
+type Tab = (typeof TABS)[number];
+
+>>>>>>> origin/main
 export default function HRPage() {
 	const { user } = useAuthStore();
 	const qc = useQueryClient();
 	const [activeTab, setActiveTab] = useState<Tab>("overview");
 	const [search, setSearch] = useState("");
+<<<<<<< HEAD
 	const [staffSearch, setStaffSearch] = useState("");
 
 	// Modal states
@@ -1817,27 +1846,39 @@ export default function HRPage() {
 	const [auditFilter, setAuditFilter] = useState("");
 
 	// ── Queries ──────────────────────────────────────────────────────────────
+=======
+
+>>>>>>> origin/main
 	const { data: attacheesRaw } = useQuery({
 		queryKey: ["attachees"],
 		queryFn: () => usersApi.list({ role: "attachee" }).then((r) => r.data),
 		refetchInterval: 120000,
 	});
+<<<<<<< HEAD
 	const { data: allStaffRaw } = useQuery({
 		queryKey: ["all-staff"],
 		queryFn: () => usersApi.list().then((r) => r.data),
 		enabled: activeTab === "staff" || activeTab === "overview",
 	});
+=======
+
+>>>>>>> origin/main
 	const { data: leaveRaw } = useQuery({
 		queryKey: ["leave-requests"],
 		queryFn: () => attendanceApi.leaveRequests().then((r) => r.data),
 		refetchInterval: 60000,
 		enabled: activeTab === "leave",
 	});
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/main
 	const { data: evalsRaw } = useQuery({
 		queryKey: ["evaluations"],
 		queryFn: () => evaluationsApi.list().then((r) => r.data),
 		enabled: activeTab === "evaluations",
 	});
+<<<<<<< HEAD
 	const { data: deptsRaw } = useQuery({
 		queryKey: ["departments"],
 		queryFn: () => hrApi.departments().then((r) => r.data),
@@ -1857,10 +1898,20 @@ export default function HRPage() {
 		queryFn: () => hrApi.attacheePrograms().then((r) => r.data),
 		enabled: activeTab === "recruitment",
 	});
+=======
+
+	const { data: deptsRaw } = useQuery({
+		queryKey: ["departments"],
+		queryFn: () => hrApi.departments().then((r) => r.data),
+		enabled: activeTab === "departments",
+	});
+
+>>>>>>> origin/main
 	const { data: userStats } = useQuery({
 		queryKey: ["user-stats"],
 		queryFn: () => usersApi.stats().then((r) => r.data),
 	});
+<<<<<<< HEAD
 	const { data: stipendsRaw } = useQuery({
 		queryKey: ["stipends"],
 		queryFn: () => financeApi.stipends().then((r) => r.data),
@@ -1942,16 +1993,30 @@ export default function HRPage() {
 	);
 
 	// ── Leave review ──────────────────────────────────────────────────────────
+=======
+
+	const attachees = Array.isArray(attacheesRaw)
+		? attacheesRaw
+		: (attacheesRaw?.results ?? []);
+	const leave = Array.isArray(leaveRaw) ? leaveRaw : (leaveRaw?.results ?? []);
+	const evals = Array.isArray(evalsRaw) ? evalsRaw : (evalsRaw?.results ?? []);
+	const depts = Array.isArray(deptsRaw) ? deptsRaw : (deptsRaw?.results ?? []);
+
+>>>>>>> origin/main
 	const reviewLeaveMutation = useMutation({
 		mutationFn: ({ id, data }: any) => attendanceApi.reviewLeave(id, data),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["leave-requests"] });
 			toast.success("Leave request updated");
+<<<<<<< HEAD
 			setReviewLeave(null);
+=======
+>>>>>>> origin/main
 		},
 		onError: () => toast.error("Update failed"),
 	});
 
+<<<<<<< HEAD
 	const handleLeaveReview = async (
 		id: string,
 		status: string,
@@ -2026,12 +2091,21 @@ export default function HRPage() {
 			)}
 
 			{/* ── Header ── */}
+=======
+	const pendingLeave = leave.filter((l: any) => l.status === "pending");
+	const approvedLeave = leave.filter((l: any) => l.status === "approved");
+	const activeAttachees = attachees.filter((a: any) => a.is_active);
+
+	return (
+		<div className="space-y-6 animate-fade-in">
+>>>>>>> origin/main
 			<div className="page-header">
 				<div>
 					<h1 className="page-title flex items-center gap-2">
 						<Users size={22} className="text-nexus-400" /> HR Management
 					</h1>
 					<p className="page-subtitle">
+<<<<<<< HEAD
 						People · leave · departments · branches · recruitment · training ·
 						stipends · compliance
 					</p>
@@ -2074,13 +2148,41 @@ export default function HRPage() {
 								{pendingLeave.length}
 							</span>
 						)}
+=======
+						Attachee management · leave requests · evaluations · departments
+					</p>
+				</div>
+				<button className="btn-primary btn-sm">
+					<UserPlus size={13} /> Onboard Attachee
+				</button>
+			</div>
+
+			{/* Tabs */}
+			<div className="flex gap-1 p-1 bg-surface-card border border-surface-border rounded-xl w-fit flex-wrap">
+				{TABS.map((tab) => (
+					<button
+						key={tab}
+						onClick={() => setActiveTab(tab)}
+						className={clsx(
+							"px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all",
+							{
+								"bg-nexus-600 text-white": activeTab === tab,
+								"text-slate-400 hover:text-white": activeTab !== tab,
+							},
+						)}>
+						{tab}
+>>>>>>> origin/main
 					</button>
 				))}
 			</div>
 
+<<<<<<< HEAD
 			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{/* OVERVIEW */}
 			{/* ═══════════════════════════════════════════════════════════════════ */}
+=======
+			{/* ── OVERVIEW ── */}
+>>>>>>> origin/main
 			{activeTab === "overview" && (
 				<div className="space-y-5">
 					<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -2105,7 +2207,11 @@ export default function HRPage() {
 							},
 							{
 								label: "Departments",
+<<<<<<< HEAD
 								value: depts.length || userStats?.by_department?.length || "—",
+=======
+								value: userStats?.by_department?.length ?? "—",
+>>>>>>> origin/main
 								color: "text-nexus-400",
 								icon: Building2,
 							},
@@ -2117,6 +2223,7 @@ export default function HRPage() {
 							</div>
 						))}
 					</div>
+<<<<<<< HEAD
 					<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
 						{[
 							{
@@ -2149,6 +2256,10 @@ export default function HRPage() {
 							</button>
 						))}
 					</div>
+=======
+
+					{/* Role breakdown */}
+>>>>>>> origin/main
 					{userStats?.by_role && (
 						<div className="card">
 							<h3 className="font-semibold text-white mb-4">Staff by Role</h3>
@@ -2158,14 +2269,23 @@ export default function HRPage() {
 										key={role}
 										className="p-3 bg-surface rounded-xl border border-surface-border">
 										<div className="text-xl font-bold text-white">{count}</div>
+<<<<<<< HEAD
 										<div className="text-xs text-slate-500 mt-0.5 capitalize">
 											{role.replace(/_/g, " ")}
 										</div>
+=======
+										<div className="text-xs text-slate-500 mt-0.5">{role}</div>
+>>>>>>> origin/main
 									</div>
 								))}
 							</div>
 						</div>
 					)}
+<<<<<<< HEAD
+=======
+
+					{/* Recent attachees */}
+>>>>>>> origin/main
 					<div className="card">
 						<div className="flex items-center justify-between mb-4">
 							<h3 className="font-semibold text-white">Recent Attachees</h3>
@@ -2186,10 +2306,14 @@ export default function HRPage() {
 							</thead>
 							<tbody>
 								{attachees.slice(0, 6).map((a: any) => (
+<<<<<<< HEAD
 									<tr
 										key={a.id}
 										className="cursor-pointer hover:bg-surface/50"
 										onClick={() => setViewAttachee(a)}>
+=======
+									<tr key={a.id}>
+>>>>>>> origin/main
 										<td>
 											<div className="flex items-center gap-2">
 												<div className="w-7 h-7 rounded-full bg-nexus-600/20 flex items-center justify-center text-xs font-bold text-nexus-400">
@@ -2231,12 +2355,16 @@ export default function HRPage() {
 								{attachees.length === 0 && (
 									<tr>
 										<td colSpan={4} className="text-center py-8 text-slate-500">
+<<<<<<< HEAD
 											No attachees —{" "}
 											<button
 												onClick={() => setShowOnboard(true)}
 												className="text-nexus-400 hover:underline">
 												onboard one
 											</button>
+=======
+											No attachees yet
+>>>>>>> origin/main
 										</td>
 									</tr>
 								)}
@@ -2246,9 +2374,13 @@ export default function HRPage() {
 				</div>
 			)}
 
+<<<<<<< HEAD
 			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{/* ATTACHEES */}
 			{/* ═══════════════════════════════════════════════════════════════════ */}
+=======
+			{/* ── ATTACHEES ── */}
+>>>>>>> origin/main
 			{activeTab === "attachees" && (
 				<div className="card">
 					<div className="flex items-center gap-3 mb-5">
@@ -2260,6 +2392,7 @@ export default function HRPage() {
 							<input
 								value={search}
 								onChange={(e) => setSearch(e.target.value)}
+<<<<<<< HEAD
 								placeholder="Search by name, email or department…"
 								className="input pl-8 py-2"
 							/>
@@ -2282,6 +2415,13 @@ export default function HRPage() {
 									"attachees.csv",
 								)
 							}>
+=======
+								placeholder="Search attachees..."
+								className="input pl-8 py-2"
+							/>
+						</div>
+						<button className="btn-secondary btn-sm">
+>>>>>>> origin/main
 							<Download size={13} /> Export
 						</button>
 					</div>
@@ -2292,13 +2432,17 @@ export default function HRPage() {
 								<th>Email</th>
 								<th>Department</th>
 								<th>Branch</th>
+<<<<<<< HEAD
 								<th>Institution</th>
+=======
+>>>>>>> origin/main
 								<th>Status</th>
 								<th>Joined</th>
 								<th>Actions</th>
 							</tr>
 						</thead>
 						<tbody>
+<<<<<<< HEAD
 							{filteredAttachees.map((a: any) => (
 								<tr key={a.id}>
 									<td className="font-medium text-white text-sm">
@@ -2461,6 +2605,52 @@ export default function HRPage() {
 										{staffSearch
 											? `No results for "${staffSearch}"`
 											: "No staff found"}
+=======
+							{attachees
+								.filter(
+									(a: any) =>
+										!search ||
+										a.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+										a.email?.toLowerCase().includes(search.toLowerCase()),
+								)
+								.map((a: any) => (
+									<tr key={a.id}>
+										<td className="font-medium text-white text-sm">
+											{a.full_name}
+										</td>
+										<td className="text-slate-400 text-xs">{a.email}</td>
+										<td className="text-slate-400 text-sm">
+											{a.department_name || "—"}
+										</td>
+										<td className="text-slate-400 text-sm">
+											{a.branch_name || "—"}
+										</td>
+										<td>
+											<span
+												className={clsx(
+													"badge",
+													a.is_active ? "badge-green" : "badge-slate",
+												)}>
+												{a.is_active ? "Active" : "Inactive"}
+											</span>
+										</td>
+										<td className="text-slate-400 text-xs">
+											{a.date_joined
+												? format(parseISO(a.date_joined), "dd MMM yyyy")
+												: "—"}
+										</td>
+										<td>
+											<button className="btn-ghost btn-sm p-1.5">
+												<Eye size={13} />
+											</button>
+										</td>
+									</tr>
+								))}
+							{attachees.length === 0 && (
+								<tr>
+									<td colSpan={7} className="text-center py-10 text-slate-500">
+										No attachees found
+>>>>>>> origin/main
 									</td>
 								</tr>
 							)}
@@ -2469,9 +2659,13 @@ export default function HRPage() {
 				</div>
 			)}
 
+<<<<<<< HEAD
 			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{/* LEAVE — with review eye button + reviewed-by details */}
 			{/* ═══════════════════════════════════════════════════════════════════ */}
+=======
+			{/* ── LEAVE REQUESTS ── */}
+>>>>>>> origin/main
 			{activeTab === "leave" && (
 				<div className="space-y-4">
 					<div className="grid grid-cols-3 gap-4">
@@ -2502,8 +2696,13 @@ export default function HRPage() {
 									<th>Type</th>
 									<th>Period</th>
 									<th>Days</th>
+<<<<<<< HEAD
 									<th>Status</th>
 									<th>Reviewed By</th>
+=======
+									<th>Reason</th>
+									<th>Status</th>
+>>>>>>> origin/main
 									<th>Actions</th>
 								</tr>
 							</thead>
@@ -2520,11 +2719,19 @@ export default function HRPage() {
 									leave.map((req: any) => (
 										<tr key={req.id}>
 											<td className="font-medium text-white text-sm">
+<<<<<<< HEAD
 												{req.user_name || req.user_full_name || "—"}
 											</td>
 											<td>
 												<span className="badge-slate text-[10px] capitalize">
 													{req.leave_type?.replace(/_/g, " ")}
+=======
+												{req.user_name || "—"}
+											</td>
+											<td>
+												<span className="badge-slate text-[10px] capitalize">
+													{req.leave_type?.replace("_", " ")}
+>>>>>>> origin/main
 												</span>
 											</td>
 											<td className="text-slate-400 text-xs">
@@ -2537,6 +2744,12 @@ export default function HRPage() {
 											<td className="text-white font-medium">
 												{req.days_requested}
 											</td>
+<<<<<<< HEAD
+=======
+											<td className="text-slate-400 text-xs max-w-xs truncate">
+												{req.reason}
+											</td>
+>>>>>>> origin/main
 											<td>
 												<span
 													className={clsx("badge text-[10px]", {
@@ -2548,6 +2761,7 @@ export default function HRPage() {
 													{req.status}
 												</span>
 											</td>
+<<<<<<< HEAD
 											<td className="text-slate-400 text-xs">
 												{req.reviewed_by_name || req.approved_by_name ? (
 													<span className="text-white">
@@ -2567,6 +2781,11 @@ export default function HRPage() {
 												</button>
 												{req.status === "pending" && (
 													<>
+=======
+											<td>
+												{req.status === "pending" && (
+													<div className="flex gap-1.5">
+>>>>>>> origin/main
 														<button
 															onClick={() =>
 																reviewLeaveMutation.mutate({
@@ -2574,8 +2793,12 @@ export default function HRPage() {
 																	data: { status: "approved" },
 																})
 															}
+<<<<<<< HEAD
 															title="Approve"
 															className="btn-success btn-sm p-1.5 mr-1">
+=======
+															className="btn-success btn-sm p-1.5">
+>>>>>>> origin/main
 															<CheckCircle size={12} />
 														</button>
 														<button
@@ -2585,11 +2808,18 @@ export default function HRPage() {
 																	data: { status: "rejected" },
 																})
 															}
+<<<<<<< HEAD
 															title="Reject"
 															className="btn-danger btn-sm p-1.5">
 															<XCircle size={12} />
 														</button>
 													</>
+=======
+															className="btn-danger btn-sm p-1.5">
+															<XCircle size={12} />
+														</button>
+													</div>
+>>>>>>> origin/main
 												)}
 											</td>
 										</tr>
@@ -2601,16 +2831,24 @@ export default function HRPage() {
 				</div>
 			)}
 
+<<<<<<< HEAD
 			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{/* EVALUATIONS */}
 			{/* ═══════════════════════════════════════════════════════════════════ */}
+=======
+			{/* ── EVALUATIONS ── */}
+>>>>>>> origin/main
 			{activeTab === "evaluations" && (
 				<div className="card">
 					<div className="flex items-center justify-between mb-5">
 						<h3 className="font-semibold text-white">All Evaluations</h3>
+<<<<<<< HEAD
 						<button
 							className="btn-primary btn-sm"
 							onClick={() => setShowNewEval(true)}>
+=======
+						<button className="btn-primary btn-sm">
+>>>>>>> origin/main
 							<Plus size={13} /> New Evaluation
 						</button>
 					</div>
@@ -2629,12 +2867,16 @@ export default function HRPage() {
 							{evals.length === 0 ? (
 								<tr>
 									<td colSpan={6} className="text-center py-10 text-slate-500">
+<<<<<<< HEAD
 										No evaluations —{" "}
 										<button
 											onClick={() => setShowNewEval(true)}
 											className="text-nexus-400 hover:underline">
 											create one
 										</button>
+=======
+										No evaluations yet
+>>>>>>> origin/main
 									</td>
 								</tr>
 							) : (
@@ -2645,9 +2887,13 @@ export default function HRPage() {
 										</td>
 										<td>
 											<span className="badge-blue text-[10px] capitalize">
+<<<<<<< HEAD
 												{ev.template?.evaluation_type ||
 													ev.evaluation_type ||
 													"evaluation"}
+=======
+												{ev.template?.evaluation_type || "evaluation"}
+>>>>>>> origin/main
 											</span>
 										</td>
 										<td className="text-slate-400 text-xs">
@@ -2692,6 +2938,7 @@ export default function HRPage() {
 				</div>
 			)}
 
+<<<<<<< HEAD
 			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{/* DEPARTMENTS */}
 			{/* ═══════════════════════════════════════════════════════════════════ */}
@@ -2701,18 +2948,29 @@ export default function HRPage() {
 						<button
 							className="btn-primary btn-sm"
 							onClick={() => setShowAddDept(true)}>
+=======
+			{/* ── DEPARTMENTS ── */}
+			{activeTab === "departments" && (
+				<div className="space-y-4">
+					<div className="flex justify-end">
+						<button className="btn-primary btn-sm">
+>>>>>>> origin/main
 							<Plus size={13} /> Add Department
 						</button>
 					</div>
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 						{depts.length === 0 ? (
 							<div className="col-span-3 card text-center py-12 text-slate-500">
+<<<<<<< HEAD
 								No departments —{" "}
 								<button
 									onClick={() => setShowAddDept(true)}
 									className="text-nexus-400 hover:underline">
 									add one
 								</button>
+=======
+								No departments yet
+>>>>>>> origin/main
 							</div>
 						) : (
 							depts.map((d: any) => (
@@ -2720,6 +2978,7 @@ export default function HRPage() {
 									key={d.id}
 									className="card hover:border-nexus-500/30 transition-all">
 									<div className="flex items-center justify-between mb-2">
+<<<<<<< HEAD
 										<div>
 											<h3 className="font-semibold text-white">{d.name}</h3>
 											{d.code && (
@@ -2728,6 +2987,9 @@ export default function HRPage() {
 												</span>
 											)}
 										</div>
+=======
+										<h3 className="font-semibold text-white">{d.name}</h3>
+>>>>>>> origin/main
 										<span
 											className={clsx(
 												"badge text-[10px]",
@@ -2753,6 +3015,7 @@ export default function HRPage() {
 					</div>
 				</div>
 			)}
+<<<<<<< HEAD
 
 			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{/* BRANCHES */}
@@ -3494,6 +3757,8 @@ export default function HRPage() {
 					)}
 				</div>
 			)}
+=======
+>>>>>>> origin/main
 		</div>
 	);
 }

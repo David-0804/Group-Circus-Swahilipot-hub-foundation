@@ -64,6 +64,10 @@ export default function CertificatesPage() {
 		queryFn: () => certificatesApi.list().then((r) => r.data),
 	});
 
+<<<<<<< HEAD
+=======
+	console.log("CERTIFICATES:", certsData);
+>>>>>>> origin/main
 
 	const certs = Array.isArray(certsData)
 		? certsData
@@ -240,7 +244,11 @@ export default function CertificatesPage() {
 											title="Verification QR Code"
 											className="btn-secondary btn-sm"
 											onClick={() => {
+<<<<<<< HEAD
 												
+=======
+												console.log("QR code:", cert.qr_verification_code);
+>>>>>>> origin/main
 												window.open(
 													`/verify/${cert.qr_verification_code}`,
 													"_blank",
@@ -355,6 +363,11 @@ function GenerateCertModal({ onClose, onSuccess }: any) {
 							!form.attachee_id || !form.signed_by_name || mutation.isPending
 						}
 						onClick={() => {
+<<<<<<< HEAD
+=======
+							console.log("BUTTON CLICKED");
+							console.log(form);
+>>>>>>> origin/main
 							mutation.mutate(form);
 						}}
 						className="btn-primary">

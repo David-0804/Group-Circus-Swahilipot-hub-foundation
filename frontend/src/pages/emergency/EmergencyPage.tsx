@@ -39,6 +39,7 @@ const SEVERITY_STYLES: Record<string, string> = {
 	critical: "badge-red",
 };
 
+<<<<<<< HEAD
 // Normalise API response — backend may return an array or { results: [] }
 function normaliseAlerts(data: any): any[] {
 	if (!data) return [];
@@ -57,10 +58,15 @@ export default function EmergencyPage() {
 	const { user } = useAuthStore();
 	const isAdmin =
 		user?.role === "system_admin" || user?.role === "broadcast_admin";
+=======
+export default function EmergencyPage() {
+	const { user } = useAuthStore();
+>>>>>>> origin/main
 	const qc = useQueryClient();
 	const [showTriggerModal, setShowTriggerModal] = useState(false);
 	const [activeFilter, setActiveFilter] = useState<"active" | "all">("active");
 
+<<<<<<< HEAD
 	const { data: rawAlerts, isLoading } = useQuery({
 		queryKey: ["emergency-alerts"],
 		queryFn: () => emergencyApi.list().then((r) => r.data),
@@ -124,6 +130,26 @@ export default function EmergencyPage() {
 		},
 	});
 
+=======
+	const { data: alerts = [], isLoading } = useQuery({
+		queryKey: ["emergency-alerts"],
+		queryFn: () => emergencyApi.list().then((r) => r.data),
+		refetchInterval: 30000,
+	});
+
+	const acknowledgeMutation = useMutation({
+		mutationFn: (id: string) => emergencyApi.acknowledge(id),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["emergency-alerts"] });
+			toast.success("Alert acknowledged");
+		},
+	});
+
+	const activeAlerts = alerts.filter((a: any) => !a.resolved);
+	const resolvedAlerts = alerts.filter((a: any) => a.resolved);
+	const displayed = activeFilter === "active" ? activeAlerts : alerts;
+
+>>>>>>> origin/main
 	return (
 		<div className="space-y-6 animate-fade-in">
 			<div className="page-header">
@@ -142,6 +168,7 @@ export default function EmergencyPage() {
 						tracking
 					</p>
 				</div>
+<<<<<<< HEAD
 				{isAdmin && (
 					<button
 						onClick={() => setShowTriggerModal(true)}
@@ -153,6 +180,17 @@ export default function EmergencyPage() {
 			</div>
 
 			{/* Active alert banner — disappears as soon as all alerts are acknowledged */}
+=======
+				<button
+					onClick={() => setShowTriggerModal(true)}
+					className="emergency-btn btn-lg">
+					<Siren size={18} />
+					SEND EMERGENCY ALERT
+				</button>
+			</div>
+
+			{/* Active alert banner */}
+>>>>>>> origin/main
 			{activeAlerts.length > 0 && (
 				<div className="p-4 rounded-xl border border-red-500/50 bg-red-900/20 animate-glow-pulse">
 					<div className="flex items-center gap-3 mb-3">
@@ -179,6 +217,7 @@ export default function EmergencyPage() {
 										{a.severity}
 									</span>
 								</div>
+<<<<<<< HEAD
 								{isAdmin && (
 									<button
 										onClick={() => acknowledgeMutation.mutate(a.id)}
@@ -187,12 +226,21 @@ export default function EmergencyPage() {
 										<CheckCircle size={12} /> Acknowledge
 									</button>
 								)}
+=======
+								<button
+									onClick={() => acknowledgeMutation.mutate(a.id)}
+									disabled={acknowledgeMutation.isPending}
+									className="btn-secondary btn-sm text-xs">
+									<CheckCircle size={12} /> Acknowledge
+								</button>
+>>>>>>> origin/main
 							</div>
 						))}
 					</div>
 				</div>
 			)}
 
+<<<<<<< HEAD
 			{/* All-clear banner */}
 			{activeAlerts.length === 0 && !isLoading && alerts.length > 0 && (
 				<div className="p-4 rounded-xl border border-green-500/40 bg-green-900/10 flex items-center gap-3">
@@ -203,6 +251,8 @@ export default function EmergencyPage() {
 				</div>
 			)}
 
+=======
+>>>>>>> origin/main
 			{/* Filter tabs */}
 			<div className="flex gap-1 p-1 bg-surface-card border border-surface-border rounded-xl w-fit">
 				<button
@@ -253,6 +303,7 @@ export default function EmergencyPage() {
 							ALERT_TYPE_CONFIG[alert.alert_type] || ALERT_TYPE_CONFIG.other;
 						const Icon = cfg.icon;
 						const ackCount = alert.acknowledged_count || 0;
+<<<<<<< HEAD
 						const isResolved = !isEffectivelyActive(alert);
 
 						return (
@@ -268,19 +319,45 @@ export default function EmergencyPage() {
 									"border-l-green-500": isResolved,
 									"border-l-blue-500": !isResolved && alert.severity === "low",
 									"opacity-60": isResolved,
+=======
+						return (
+							<div
+								key={alert.id}
+								className={clsx("card border-l-4", {
+									"border-l-red-500":
+										!alert.resolved &&
+										(alert.severity === "critical" ||
+											alert.severity === "high"),
+									"border-l-amber-500":
+										!alert.resolved && alert.severity === "medium",
+									"border-l-green-500": alert.resolved,
+									"border-l-blue-500":
+										!alert.resolved && alert.severity === "low",
+>>>>>>> origin/main
 								})}>
 								<div className="flex items-start gap-4">
 									<div
 										className={clsx(
 											"w-11 h-11 rounded-xl flex items-center justify-center shrink-0",
 											{
+<<<<<<< HEAD
 												"bg-red-500/15": !isResolved,
 												"bg-green-500/15": isResolved,
+=======
+												"bg-red-500/15": !alert.resolved,
+												"bg-green-500/15": alert.resolved,
+>>>>>>> origin/main
 											},
 										)}>
 										<Icon
 											size={20}
+<<<<<<< HEAD
 											className={isResolved ? "text-green-400" : "text-red-400"}
+=======
+											className={
+												alert.resolved ? "text-green-400" : "text-red-400"
+											}
+>>>>>>> origin/main
 										/>
 									</div>
 
@@ -301,11 +378,17 @@ export default function EmergencyPage() {
 														)}>
 														{alert.severity}
 													</span>
+<<<<<<< HEAD
 													{isResolved ? (
 														<span className="badge-green text-[10px]">
 															{alert.acknowledged && !alert.resolved
 																? "Acknowledged"
 																: "Resolved"}
+=======
+													{alert.resolved ? (
+														<span className="badge-green text-[10px]">
+															Resolved
+>>>>>>> origin/main
 														</span>
 													) : (
 														<span className="badge-red text-[10px] animate-pulse">
@@ -352,7 +435,11 @@ export default function EmergencyPage() {
 												<CheckCircle size={11} />
 												{ackCount} acknowledgement{ackCount !== 1 ? "s" : ""}
 											</div>
+<<<<<<< HEAD
 											{!isResolved && isAdmin && (
+=======
+											{!alert.resolved && (
+>>>>>>> origin/main
 												<button
 													onClick={() => acknowledgeMutation.mutate(alert.id)}
 													disabled={acknowledgeMutation.isPending}
@@ -410,7 +497,10 @@ function TriggerAlertModal({ onClose, onSuccess }: any) {
 		severity: "high",
 		affected_systems: [] as string[],
 	});
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 	const SYSTEMS = [
 		"FM Station",
 		"Website",

@@ -707,14 +707,22 @@ export default function SettingsPage() {
 								</h3>
 								<div className="grid grid-cols-2 gap-3">
 									{[
+<<<<<<< HEAD
 										{ label: "System Version", value: "Swahilipot Foundation" },
+=======
+										{ label: "System Version", value: "NEXUS Enterprise v1.0" },
+>>>>>>> origin/main
 										{ label: "Django Version", value: "6.x" },
 										{ label: "Database", value: "PostgreSQL 18" },
 										{ label: "Cache Backend", value: "Redis" },
 										{ label: "File Storage", value: "Local / S3-compatible" },
 										{ label: "Auth Method", value: "JWT + MFA (TOTP)" },
 										{ label: "Time Zone", value: "Africa/Nairobi (EAT)" },
+<<<<<<< HEAD
 										{ label: "Debug Mode", value: "False (Development)" },
+=======
+										{ label: "Debug Mode", value: "True (Development)" },
+>>>>>>> origin/main
 									].map(({ label, value }) => (
 										<div
 											key={label}
@@ -910,7 +918,11 @@ function OrgForm({ org, onSave, isPending }: any) {
 					<input
 						{...register("name")}
 						className="input"
+<<<<<<< HEAD
 						placeholder="Swahilipot Foundation Institution"
+=======
+						placeholder="Broadcast Media Institution"
+>>>>>>> origin/main
 					/>
 				</div>
 				<div className="input-group">

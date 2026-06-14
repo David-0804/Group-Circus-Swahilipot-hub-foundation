@@ -23,10 +23,14 @@ const ExecutiveDash = lazy(
 	() => import("./pages/dashboard/ExecutiveDashboard"),
 );
 const AttacheeDash = lazy(() => import("./pages/dashboard/AttacheeDashboard"));
+<<<<<<< HEAD
 const DeptDashboard = lazy(
 	// ← add this
 	() => import("./pages/attendance/DeptDashboardPage"),
 );
+=======
+
+>>>>>>> origin/main
 // ── Internship modules ────────────────────────────────────────────────────────
 const AttendancePage = lazy(() => import("./pages/attendance/AttendancePage"));
 const TasksPage = lazy(() => import("./pages/tasks/TasksPage"));
@@ -77,6 +81,7 @@ const EmergencyPage = lazy(() => import("./pages/emergency/EmergencyPage"));
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+<<<<<<< HEAD
 // ── RBAC role groups — exact strings from backend roles list ─────────────────
 const ROLES = {
 	// Attachee — own data only
@@ -153,6 +158,8 @@ function RoleRoute({
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+=======
+>>>>>>> origin/main
 const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
@@ -182,6 +189,7 @@ function RoleDashboard() {
 
 	if (role === "attachee") return <AttacheeDash />;
 
+<<<<<<< HEAD
 	if (([...ROLES.BROADCAST] as string[]).includes(role))
 		return <BroadcastDash />;
 
@@ -192,6 +200,25 @@ function RoleDashboard() {
 		return <DeptDashboard />;
 
 	// HR, Finance, University, Admin → full admin dashboard
+=======
+	if (
+		[
+			"broadcast_admin",
+			"broadcast_staff",
+			"broadcast_student",
+			"journalist",
+			"presenter",
+			"editor",
+			"videographer",
+			"station_engineer",
+		].includes(role)
+	)
+		return <BroadcastDash />;
+
+	if (["executive", "data_analyst"].includes(role)) return <ExecutiveDash />;
+
+	// All admin-type roles get the full admin dashboard
+>>>>>>> origin/main
 	return <AdminDashboard />;
 }
 
@@ -220,13 +247,18 @@ export default function App() {
 						/>
 						<Route path="/mfa" element={<MFAPage />} />
 						<Route path="/verify/:code" element={<VerifyPage />} />{" "}
+<<<<<<< HEAD
 						{/* ── Protected (requires auth + role check) ─────────────── */}
+=======
+						{/* ── Protected (requires auth) ──────────────────────────── */}
+>>>>>>> origin/main
 						<Route
 							element={
 								<PrivateRoute>
 									<AppLayout />
 								</PrivateRoute>
 							}>
+<<<<<<< HEAD
 							{/* ── Core — every authenticated user ───────────────────── */}
 							<Route path="/dashboard" element={<RoleDashboard />} />
 							<Route
@@ -528,6 +560,43 @@ export default function App() {
 									</RoleRoute>
 								}
 							/>
+=======
+							{/* Core */}
+							<Route path="/dashboard" element={<RoleDashboard />} />
+							<Route path="/profile" element={<ProfilePage />} />
+							<Route path="/notifications" element={<NotificationsPage />} />
+							<Route path="/emergency-alerts" element={<EmergencyPage />} />
+
+							{/* Internship */}
+							<Route path="/attendance" element={<AttendancePage />} />
+							<Route path="/tasks" element={<TasksPage />} />
+							<Route path="/logbooks" element={<LogbooksPage />} />
+							<Route path="/evaluations" element={<EvaluationsPage />} />
+							<Route path="/certificates" element={<CertificatesPage />} />
+							<Route path="/attachees" element={<AttacheeList />} />
+
+							{/* Broadcast */}
+							<Route path="/equipment" element={<EquipmentPage />} />
+							<Route path="/projects" element={<AttacheeList />} />
+							<Route path="/fm-report" element={<FMReportPage />} />
+							<Route path="/radio" element={<RadioPage />} />
+							<Route path="/news" element={<NewsPage />} />
+							<Route path="/videography" element={<VideographyPage />} />
+							<Route path="/calls" element={<CallsPage />} />
+
+							{/* Digital Services */}
+							<Route path="/subscriptions" element={<SubscriptionsPage />} />
+							<Route path="/wifi" element={<WifiPage />} />
+							<Route path="/file-transfer" element={<FileTransferPage />} />
+							<Route path="/feedback" element={<FeedbackPage />} />
+
+							{/* Enterprise */}
+							<Route path="/analytics" element={<AnalyticsPage />} />
+							<Route path="/hr" element={<HRPage />} />
+							<Route path="/finance" element={<FinancePage />} />
+							<Route path="/users" element={<UserManagement />} />
+							<Route path="/settings" element={<SettingsPage />} />
+>>>>>>> origin/main
 						</Route>
 						<Route path="/verify/:code" element={<VerifyPage />} />
 						{/* Catch-all */}

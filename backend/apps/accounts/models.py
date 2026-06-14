@@ -62,7 +62,11 @@ class Branch(TimeStampedModel):
     is_active = models.BooleanField(default=True)
     is_headquarters = models.BooleanField(default=False)
 
+<<<<<<< HEAD
     class Meta:    # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         unique_together = [['organisation', 'code']]
 
     def __str__(self):
@@ -118,6 +122,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         ('station_engineer', 'Station Engineer'),
     ]
 
+<<<<<<< HEAD
     FONT_CHOICES = [
         ('default',  'Default'),
         ('dyslexic', 'Dyslexic-friendly'),
@@ -125,6 +130,8 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         ('serif',    'Serif'),
     ]
 
+=======
+>>>>>>> origin/main
     email = models.EmailField(unique=True)
     employee_id = models.CharField(max_length=50, blank=True, unique=True, null=True)
     first_name = models.CharField(max_length=100)
@@ -159,6 +166,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     notification_push = models.BooleanField(default=True)
     timezone_preference = models.CharField(max_length=50, default='Africa/Nairobi')
 
+<<<<<<< HEAD
     # ── Accessibility preferences (synced across devices) ──────────────────
     font_preference = models.CharField(
         max_length=20,
@@ -167,6 +175,8 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         help_text='UI font selected by the user in Accessibility settings',
     )
 
+=======
+>>>>>>> origin/main
     # Device tracking
     last_ip = models.GenericIPAddressField(null=True, blank=True)
     last_device = models.CharField(max_length=200, blank=True)
@@ -177,7 +187,11 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
 
     objects = UserManager()
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         indexes = [
             models.Index(fields=['email']),
             models.Index(fields=['role', 'organisation']),
@@ -230,4 +244,8 @@ class UserSession(TimeStampedModel):
     last_activity = models.DateTimeField(auto_now=True)
 
     def __str__(self):
+<<<<<<< HEAD
         return f"{self.user.email} — {self.ip_address}"
+=======
+        return f"{self.user.email} — {self.ip_address}"
+>>>>>>> origin/main

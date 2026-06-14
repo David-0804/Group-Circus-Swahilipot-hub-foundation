@@ -1,10 +1,18 @@
+<<<<<<< HEAD
 // Nexus — Notifications Centre
+=======
+// Swahilipot — Notifications Centre
+>>>>>>> origin/main
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import {
 	Bell,
 	CheckCheck,
+<<<<<<< HEAD
+=======
+	Filter,
+>>>>>>> origin/main
 	Radio,
 	Package,
 	ClipboardList,
@@ -14,16 +22,24 @@ import {
 	MessageSquare,
 	Zap,
 	Info,
+<<<<<<< HEAD
 	Eye,
 	X,
+=======
+	Trash2,
+	Eye,
+>>>>>>> origin/main
 } from "lucide-react";
 import { notificationsApi } from "../../services/api";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 
+<<<<<<< HEAD
 // ─────────────────────────────────────────────
 // Type config
 // ─────────────────────────────────────────────
+=======
+>>>>>>> origin/main
 const TYPE_CONFIG: Record<string, { icon: any; color: string; bg: string }> = {
 	task_assigned: {
 		icon: ClipboardList,
@@ -59,8 +75,13 @@ const TYPE_CONFIG: Record<string, { icon: any; color: string; bg: string }> = {
 	},
 	certificate_issued: {
 		icon: Zap,
+<<<<<<< HEAD
 		color: "text-nexus-400",
 		bg: "bg-nexus-500/10",
+=======
+		color: "text-Swahilipot-400",
+		bg: "bg-Swahilipot-500/10",
+>>>>>>> origin/main
 	},
 	wifi_decision: { icon: Wifi, color: "text-cyan-400", bg: "bg-cyan-500/10" },
 	ticket_update: {
@@ -77,6 +98,7 @@ const TYPE_CONFIG: Record<string, { icon: any; color: string; bg: string }> = {
 	general: { icon: Info, color: "text-slate-400", bg: "bg-slate-500/10" },
 };
 
+<<<<<<< HEAD
 // ─────────────────────────────────────────────
 // Detail modal
 // ─────────────────────────────────────────────
@@ -220,28 +242,43 @@ function NotificationCard({ notification: n, onRead, onView, urgent }: any) {
 // ─────────────────────────────────────────────
 // Main page
 // ─────────────────────────────────────────────
+=======
+>>>>>>> origin/main
 export default function NotificationsPage() {
 	const qc = useQueryClient();
 	const [filter, setFilter] = useState<"all" | "unread" | "urgent">("all");
 	const [typeFilter, setTypeFilter] = useState("");
+<<<<<<< HEAD
 	const [selectedNotification, setSelectedNotification] = useState<any>(null);
 
 	const { data: rawNotifications = [], isLoading } = useQuery({
+=======
+
+	const { data: notifications = [], isLoading } = useQuery({
+>>>>>>> origin/main
 		queryKey: ["notifications", filter, typeFilter],
 		queryFn: () =>
 			notificationsApi
 				.list({
 					unread: filter === "unread" ? "true" : undefined,
+<<<<<<< HEAD
 					urgent: filter === "urgent" ? "true" : undefined,
 					type: typeFilter || undefined,
 				})
 				.then((r) => r.data.results ?? r.data),
 		refetchInterval: 30_000,
+=======
+					type: typeFilter || undefined,
+				})
+				.then((r) => r.data.results || r.data),
+		refetchInterval: 30000,
+>>>>>>> origin/main
 	});
 
 	const { data: unreadCount = 0 } = useQuery({
 		queryKey: ["unread-notifications"],
 		queryFn: () => notificationsApi.unreadCount().then((r) => r.data.count),
+<<<<<<< HEAD
 		refetchInterval: 30_000,
 	});
 	
@@ -255,6 +292,10 @@ export default function NotificationsPage() {
 	});
 
 	const urgent = notifications.filter((n: any) => n.is_urgent);
+=======
+		refetchInterval: 30000,
+	});
+>>>>>>> origin/main
 
 	const markReadMutation = useMutation({
 		mutationFn: (id: string) => notificationsApi.markRead(id),
@@ -273,6 +314,7 @@ export default function NotificationsPage() {
 		},
 	});
 
+<<<<<<< HEAD
 	return (
 		<div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
 			{/* Header */}
@@ -280,6 +322,16 @@ export default function NotificationsPage() {
 				<div>
 					<h1 className="page-title flex items-center gap-2">
 						<Bell size={22} className="text-nexus-400" />
+=======
+	const urgent = notifications.filter((n: any) => n.is_urgent);
+
+	return (
+		<div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
+			<div className="page-header">
+				<div>
+					<h1 className="page-title flex items-center gap-2">
+						<Bell size={22} className="text-Swahilipot-400" />
+>>>>>>> origin/main
 						Notifications
 						{unreadCount > 0 && (
 							<span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold">
@@ -297,20 +349,31 @@ export default function NotificationsPage() {
 						disabled={markAllMutation.isPending}
 						className="btn-secondary btn-sm">
 						<CheckCheck size={14} />
+<<<<<<< HEAD
 						{markAllMutation.isPending ? "Marking…" : "Mark All Read"}
+=======
+						{markAllMutation.isPending ? "Marking..." : "Mark All Read"}
+>>>>>>> origin/main
 					</button>
 				)}
 			</div>
 
 			{/* Urgent strip */}
+<<<<<<< HEAD
 			{urgent.length > 0 && filter !== "urgent" && (
+=======
+			{urgent.length > 0 && (
+>>>>>>> origin/main
 				<div className="space-y-2">
 					{urgent.map((n: any) => (
 						<NotificationCard
 							key={n.id}
 							notification={n}
 							onRead={() => markReadMutation.mutate(n.id)}
+<<<<<<< HEAD
 							onView={() => setSelectedNotification(n)}
+=======
+>>>>>>> origin/main
 							urgent
 						/>
 					))}
@@ -327,11 +390,16 @@ export default function NotificationsPage() {
 							className={clsx(
 								"px-4 py-1.5 rounded-lg text-sm font-medium capitalize transition-all",
 								{
+<<<<<<< HEAD
 									"bg-nexus-600 text-white": filter === f,
+=======
+									"bg-Swahilipot-600 text-white": filter === f,
+>>>>>>> origin/main
 									"text-slate-400 hover:text-white": filter !== f,
 								},
 							)}>
 							{f}
+<<<<<<< HEAD
 							{f === "unread" && unreadCount > 0 && (
 								<span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-red-500/80 text-white text-[10px] font-bold">
 									{unreadCount}
@@ -341,6 +409,11 @@ export default function NotificationsPage() {
 					))}
 				</div>
 
+=======
+						</button>
+					))}
+				</div>
+>>>>>>> origin/main
 				<select
 					value={typeFilter}
 					onChange={(e) => setTypeFilter(e.target.value)}
@@ -352,6 +425,7 @@ export default function NotificationsPage() {
 					<option value="checkout_update">Equipment</option>
 					<option value="evaluation_due">Evaluations</option>
 					<option value="reminder">Reminders</option>
+<<<<<<< HEAD
 					<option value="ticket_update">Tickets</option>
 					<option value="wifi_decision">Wi-Fi</option>
 					<option value="general">General</option>
@@ -378,6 +452,11 @@ export default function NotificationsPage() {
 				</p>
 			)}
 
+=======
+				</select>
+			</div>
+
+>>>>>>> origin/main
 			{/* Notification list */}
 			<div className="space-y-2">
 				{isLoading ? (
@@ -397,16 +476,25 @@ export default function NotificationsPage() {
 						</p>
 					</div>
 				) : (
+<<<<<<< HEAD
 					notifications.map((n: any) => (
 						<NotificationCard
 							key={n.id}
 							notification={n}
 							onRead={() => markReadMutation.mutate(n.id)}
 							onView={() => setSelectedNotification(n)}
+=======
+					notifications.map((notification: any) => (
+						<NotificationCard
+							key={notification.id}
+							notification={notification}
+							onRead={() => markReadMutation.mutate(notification.id)}
+>>>>>>> origin/main
 						/>
 					))
 				)}
 			</div>
+<<<<<<< HEAD
 
 			{/* Detail modal */}
 			{selectedNotification && (
@@ -416,6 +504,72 @@ export default function NotificationsPage() {
 					onRead={() => markReadMutation.mutate(selectedNotification.id)}
 				/>
 			)}
+=======
+		</div>
+	);
+}
+
+function NotificationCard({ notification: n, onRead, urgent }: any) {
+	const config = TYPE_CONFIG[n.notification_type] || TYPE_CONFIG.general;
+	const Icon = config.icon;
+
+	return (
+		<div
+			className={clsx(
+				"flex items-start gap-4 p-4 rounded-xl border transition-all",
+				{
+					"border-red-500/40 bg-red-900/10": urgent && !n.read,
+					"border-Swahilipot-500/20 bg-Swahilipot-900/10": !urgent && !n.read,
+					"border-surface-border bg-surface-card opacity-70": n.read,
+				},
+			)}>
+			{/* Icon */}
+			<div
+				className={clsx(
+					"w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+					config.bg,
+				)}>
+				<Icon size={18} className={config.color} />
+			</div>
+
+			{/* Content */}
+			<div className="flex-1 min-w-0">
+				<div className="flex items-start justify-between gap-2">
+					<div className="flex-1">
+						<p
+							className={clsx(
+								"text-sm font-semibold leading-snug",
+								n.read ? "text-slate-400" : "text-white",
+							)}>
+							{n.title}
+						</p>
+						<p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
+							{n.body}
+						</p>
+					</div>
+					{!n.read && (
+						<div className="w-2 h-2 rounded-full bg-Swahilipot-400 shrink-0 mt-1.5" />
+					)}
+				</div>
+				<div className="flex items-center gap-3 mt-2">
+					<span className="text-[10px] text-slate-600">
+						{formatDistanceToNow(parseISO(n.created_at), { addSuffix: true })}
+					</span>
+					{n.notification_type && (
+						<span className="text-[10px] text-slate-600 capitalize">
+							{n.notification_type.replace(/_/g, " ")}
+						</span>
+					)}
+					{!n.read && (
+						<button
+							onClick={onRead}
+							className="ml-auto text-[10px] text-Swahilipot-400 hover:text-Swahilipot-300 flex items-center gap-1">
+							<Eye size={10} /> Mark read
+						</button>
+					)}
+				</div>
+			</div>
+>>>>>>> origin/main
 		</div>
 	);
 }

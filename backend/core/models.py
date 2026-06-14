@@ -10,7 +10,11 @@ class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         abstract = True
 
 
@@ -19,7 +23,11 @@ class SoftDeleteModel(TimeStampedModel):
     is_deleted = models.BooleanField(default=False, db_index=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore# type: ignore[override]
+=======
+    class Meta:# type: ignore[override]
+>>>>>>> origin/main
         abstract = True
 
     def soft_delete(self):
@@ -40,7 +48,11 @@ class AuditedModel(SoftDeleteModel):
         on_delete=models.SET_NULL, related_name='%(class)s_updated',
     )
 
+<<<<<<< HEAD
     class Meta:  # type: ignore# type: ignore[override]
+=======
+    class Meta:# type: ignore[override]
+>>>>>>> origin/main
         abstract = True
 
 
@@ -59,7 +71,11 @@ class AuditLog(TimeStampedModel):
     session_id = models.CharField(max_length=100, blank=True)
     extra = models.JSONField(null=True, blank=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore# type: ignore[override]
+=======
+    class Meta:# type: ignore[override]
+>>>>>>> origin/main
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['user', 'created_at']),

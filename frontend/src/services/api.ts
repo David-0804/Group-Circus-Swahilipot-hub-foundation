@@ -17,6 +17,10 @@ export const api: AxiosInstance = axios.create({
 // Attach JWT to every request
 api.interceptors.request.use((config) => {
 	const token = useAuthStore.getState().accessToken;
+<<<<<<< HEAD
+=======
+	console.log("TOKEN:", token);
+>>>>>>> origin/main
 	if (token) config.headers.Authorization = `Bearer ${token}`;
 	return config;
 });
@@ -155,10 +159,13 @@ export const authApi = {
 	verifyMfa: (token: string) => api.post("/auth/mfa/verify/", { token }),
 	profile: () => api.get("/accounts/profile/"),
 	updateProfile: (data: Partial<User>) => api.patch("/accounts/profile/", data),
+<<<<<<< HEAD
 	updateProfileMultipart: (data: FormData) =>
 		api.patch("/accounts/profile/", data, {
 			headers: { "Content-Type": "multipart/form-data" },
 		}),
+=======
+>>>>>>> origin/main
 	changePassword: (data: any) => api.post("/accounts/profile/password/", data),
 	mfaSetup: () => api.get("/accounts/mfa/setup/"),
 	mfaEnable: (token: string) => api.post("/accounts/mfa/setup/", { token }),
@@ -331,6 +338,7 @@ export const radioApi = {
 	shows: () => api.get("/radio/shows/"),
 	createShow: (data: any) => api.post("/radio/shows/", data),
 	mySchedule: () => api.get("/radio/my-schedule/"),
+<<<<<<< HEAD
 
 	// ── Notifications & reminders ────────────────────────────────────────
 	/** POST /radio/notify/
@@ -349,6 +357,8 @@ export const radioApi = {
 	 *            frequency_name, location, minutes_away, gcal_url }> } */
 	upcomingReminders: (window = 65) =>
 		api.get("/radio/upcoming-reminders/", { params: { window } }),
+=======
+>>>>>>> origin/main
 };
 
 // ── FM Report ──────────────────────────────────────────────────────────────
@@ -464,17 +474,25 @@ export const callsApi = {
 
 // ── Finance ────────────────────────────────────────────────────────────────
 export const financeApi = {
+<<<<<<< HEAD
 	// Existing
+=======
+>>>>>>> origin/main
 	budgets: (params?: any) => api.get("/finance/budgets/", { params }),
 	createBudget: (data: any) => api.post("/finance/budgets/", data),
 	expenses: (params?: any) => api.get("/finance/expenses/", { params }),
 	submitExpense: (data: any) => api.post("/finance/expenses/", data),
 	approveExpense: (id: string, data: any) =>
+<<<<<<< HEAD
 		api.post(`/finance/expenses/${id}/action/`, data),
+=======
+		api.post("/finance/expenses/" + id + "/approve/", data),
+>>>>>>> origin/main
 	invoices: (params?: any) => api.get("/finance/invoices/", { params }),
 	stipends: (params?: any) => api.get("/finance/stipends/", { params }),
 	cashFlow: (params?: any) => api.get("/finance/cash-flow/", { params }),
 	reports: (params?: any) => api.get("/finance/reports/", { params }),
+<<<<<<< HEAD
 
 	// Invoices
 	createInvoice: (data: any) => api.post("/finance/invoices/", data),
@@ -532,11 +550,23 @@ export const analyticsApi = {
 		api.get(`/analytics/department/${deptId}/`, { params }),
 
 	// ── Legacy CSV export (kept for backwards compat) ────────────────────────
+=======
+};
+
+// ── Analytics ──────────────────────────────────────────────────────────────
+export const analyticsApi = {
+	dashboard: () => api.get("/analytics/dashboard/"),
+	attendance: (params?: any) => api.get("/analytics/attendance/", { params }),
+	tasks: (params?: any) => api.get("/analytics/tasks/", { params }),
+	internship: (params?: any) => api.get("/analytics/internship/", { params }),
+	broadcast: (params?: any) => api.get("/analytics/broadcast/", { params }),
+>>>>>>> origin/main
 	exportReport: (module: string, params?: any) =>
 		api.get("/analytics/export/" + module + "/", {
 			params,
 			responseType: "blob",
 		}),
+<<<<<<< HEAD
 
 	// ── New export engine: PDF · Excel · PPTX · CSV · JSON ──────────────────
 	// GET /analytics/exports/<fmt>/<module>/?days=30
@@ -584,6 +614,8 @@ export const analyticsApi = {
 		a.click();
 		URL.revokeObjectURL(objUrl);
 	},
+=======
+>>>>>>> origin/main
 };
 
 // ── Admin Dashboard ────────────────────────────────────────────────────────
@@ -760,6 +792,7 @@ export const rdApi = {
 	submitIdea: (data: any) => api.post("/rd/ideas/", data),
 	patents: (params?: any) => api.get("/rd/patents/", { params }),
 };
+<<<<<<< HEAD
 
 export const deptApi = {
 	overview: () => api.get("/attendance/dept/overview/"),
@@ -777,3 +810,5 @@ export const deptApi = {
 	autoEnforce: (dryRun = false) =>
 		api.post("/attendance/dept/auto-enforce/", { dry_run: dryRun }),
 };
+=======
+>>>>>>> origin/main

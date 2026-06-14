@@ -1,6 +1,10 @@
 // Nexus — Evaluations Page
 import { useState } from "react";
+<<<<<<< HEAD
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+=======
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+>>>>>>> origin/main
 import { format, parseISO } from "date-fns";
 import {
 	Star,
@@ -14,7 +18,10 @@ import { evaluationsApi } from "../../services/api";
 import { useAuthStore } from "../../services/api";
 import toast from "react-hot-toast";
 import clsx from "clsx";
+<<<<<<< HEAD
 import NewEvaluationModal from "./NewEvaluationModal";
+=======
+>>>>>>> origin/main
 
 const TYPE_BADGES: Record<string, string> = {
 	weekly: "badge-blue",
@@ -34,8 +41,12 @@ export default function EvaluationsPage() {
 		"broadcast_admin",
 	].includes(user?.role || "");
 	const [selectedEval, setSelectedEval] = useState<any>(null);
+<<<<<<< HEAD
 	const [showDetailModal, setShowDetailModal] = useState(false);
 	const [showCreateModal, setShowCreateModal] = useState(false);
+=======
+	const [showModal, setShowModal] = useState(false);
+>>>>>>> origin/main
 
 	const { data: evaluationsData, isLoading } = useQuery({
 		queryKey: ["evaluations"],
@@ -43,6 +54,11 @@ export default function EvaluationsPage() {
 		refetchInterval: 120000,
 	});
 
+<<<<<<< HEAD
+=======
+	console.log("EVALUATIONS:", evaluationsData);
+
+>>>>>>> origin/main
 	const evaluations = Array.isArray(evaluationsData)
 		? evaluationsData
 		: Array.isArray(evaluationsData?.results)
@@ -75,7 +91,14 @@ export default function EvaluationsPage() {
 				</div>
 				{isEvaluator && (
 					<button
+<<<<<<< HEAD
 						onClick={() => setShowCreateModal(true)}
+=======
+						onClick={() => {
+							setSelectedEval(null);
+							setShowModal(true);
+						}}
+>>>>>>> origin/main
 						className="btn-primary">
 						<Plus size={15} /> New Evaluation
 					</button>
@@ -183,7 +206,11 @@ export default function EvaluationsPage() {
 							className="card-hover"
 							onClick={() => {
 								setSelectedEval(ev);
+<<<<<<< HEAD
 								setShowDetailModal(true);
+=======
+								setShowModal(true);
+>>>>>>> origin/main
 							}}>
 							<div className="flex items-center gap-4">
 								<div className="w-12 h-12 rounded-xl bg-Nexus-600/20 flex items-center justify-center shrink-0">
@@ -203,18 +230,28 @@ export default function EvaluationsPage() {
 									<div className="flex items-center gap-2 flex-wrap">
 										<span className="font-medium text-white text-sm">
 											{ev.template?.name ||
+<<<<<<< HEAD
 												ev.evaluation_type ||
+=======
+>>>>>>> origin/main
 												ev.template?.evaluation_type ||
 												"Evaluation"}
 										</span>
 										<span
 											className={clsx(
 												"badge text-[10px]",
+<<<<<<< HEAD
 												TYPE_BADGES[
 													ev.evaluation_type ?? ev.template?.evaluation_type
 												] || "badge-slate",
 											)}>
 											{ev.evaluation_type ?? ev.template?.evaluation_type}
+=======
+												TYPE_BADGES[ev.template?.evaluation_type] ||
+													"badge-slate",
+											)}>
+											{ev.template?.evaluation_type}
+>>>>>>> origin/main
 										</span>
 										<span
 											className={clsx("badge text-[10px]", {
@@ -246,16 +283,25 @@ export default function EvaluationsPage() {
 				)}
 			</div>
 
+<<<<<<< HEAD
 			{/* Detail modal */}
 			{showDetailModal && selectedEval && (
 				<EvaluationDetailModal
 					evaluation={selectedEval}
 					onClose={() => {
 						setShowDetailModal(false);
+=======
+			{showModal && selectedEval && (
+				<EvaluationDetailModal
+					evaluation={selectedEval}
+					onClose={() => {
+						setShowModal(false);
+>>>>>>> origin/main
 						setSelectedEval(null);
 					}}
 				/>
 			)}
+<<<<<<< HEAD
 
 			{/* Create modal */}
 			{showCreateModal && (
@@ -264,6 +310,8 @@ export default function EvaluationsPage() {
 					onSuccess={() => qc.invalidateQueries({ queryKey: ["evaluations"] })}
 				/>
 			)}
+=======
+>>>>>>> origin/main
 		</div>
 	);
 }

@@ -43,6 +43,11 @@ export default function LogbooksPage() {
 		queryFn: () => logbooksApi.list().then((r) => r.data),
 	});
 
+<<<<<<< HEAD
+=======
+	console.log(data);
+
+>>>>>>> origin/main
 	const logbooks = Array.isArray(data)
 		? data
 		: Array.isArray(data?.results)
@@ -73,6 +78,11 @@ export default function LogbooksPage() {
 		onError: (e: any) =>
 			toast.error(e.response?.data?.detail || "Failed to save entry"),
 	});
+<<<<<<< HEAD
+=======
+	console.log(logbooks);
+	console.log(Array.isArray(logbooks));
+>>>>>>> origin/main
 	return (
 		<div className="space-y-6 animate-fade-in">
 			<div className="page-header">

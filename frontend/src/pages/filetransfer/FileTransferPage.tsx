@@ -1,6 +1,9 @@
 // Nexus — Secure File Transfer
+<<<<<<< HEAD
 // Add this import at the top
 import { QRCodeSVG } from "qrcode.react";
+=======
+>>>>>>> origin/main
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
@@ -296,6 +299,7 @@ export default function FileTransferPage() {
 							</h3>
 						</div>
 						<div className="modal-body">
+<<<<<<< HEAD
 							<div className="bg-white p-4 rounded-xl mx-auto w-fit mb-4">
 								<QRCodeSVG
 									value={`${window.location.origin}/api/v1/file-transfer/download/${qrModal.token}/`}
@@ -304,6 +308,15 @@ export default function FileTransferPage() {
 									fgColor="#000000"
 									level="M"
 								/>
+=======
+							<div className="bg-white p-6 rounded-xl mx-auto w-fit mb-4">
+								{/* In production, generate actual QR code using qrcode library */}
+								<div className="w-40 h-40 bg-slate-200 rounded flex items-center justify-center text-slate-500 text-xs text-center">
+									QR Code for
+									<br />
+									{qrModal.original_filename}
+								</div>
+>>>>>>> origin/main
 							</div>
 							<p className="text-slate-400 text-sm">
 								{qrModal.original_filename}

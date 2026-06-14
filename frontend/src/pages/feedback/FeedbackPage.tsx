@@ -70,11 +70,19 @@ export default function FeedbackPage() {
 		refetchInterval: 60000,
 	});
 
+<<<<<<< HEAD
 	const tickets = Array.isArray(ticketsData)
     ? ticketsData
     : Array.isArray(ticketsData?.results)
         ? ticketsData.results
         : [];
+=======
+	const tickets = Array.isArray(ticketsData)Nexus
+		? ticketsData
+		: Array.isArray(ticketsData?.results)
+			? ticketsData.results
+			: [];
+>>>>>>> origin/main
 
 	const { data: stats } = useQuery({
 		queryKey: ["feedback-stats"],
@@ -141,7 +149,11 @@ export default function FeedbackPage() {
 			</div>
 
 			{/* Filters */}
+<<<<<<< HEAD
 			<div className="flex flex-wrap gap-3">
+=======
+			<div className="flex flex-wrap gap-3">Nexus
+>>>>>>> origin/main
 				<div className="relative flex-1 min-w-48">
 					<Search
 						size={14}
@@ -263,10 +275,17 @@ export default function FeedbackPage() {
 				<NewTicketModal
 					onClose={() => setShowNewModal(false)}
 					onSuccess={() => {
+<<<<<<< HEAD
 						qc.invalidateQueries({ queryKey: ["feedback"], exact: false });
 						setShowNewModal(false);
 					}}
 				/>
+=======
+						qc.invalidateQueries({ queryKey: ["feedback"] });
+						setShowNewModal(false);
+					}}NexusNexus
+				/>Nexus
+>>>>>>> origin/main
 			)}
 
 			{/* Ticket detail modal */}

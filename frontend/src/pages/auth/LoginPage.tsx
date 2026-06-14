@@ -89,9 +89,15 @@ export default function LoginPage() {
 					<div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-Nexus shadow-Nexus mb-4">
 						<Zap size={28} className="text-white" />
 					</div>
+<<<<<<< HEAD
 					<h1 className="font-display font-bold text-3xl text-white">Swahilipot</h1>
 					<p className="text-slate-400 text-sm mt-1 tracking-widest uppercase">
 						Foundation Management System
+=======
+					<h1 className="font-display font-bold text-3xl text-white">Nexus</h1>
+					<p className="text-slate-400 text-sm mt-1 tracking-widest uppercase">
+						Enterprise Management System
+>>>>>>> origin/main
 					</p>
 				</div>
 
@@ -189,7 +195,11 @@ export default function LoginPage() {
 				</div>
 
 				<p className="text-center text-xs text-slate-600 mt-6">
+<<<<<<< HEAD
 					Swahilipot Foundation — Secure Production-Grade System
+=======
+					Nexus Enterprise v1.0 — Secure Production-Grade System
+>>>>>>> origin/main
 				</p>
 			</div>
 		</div>

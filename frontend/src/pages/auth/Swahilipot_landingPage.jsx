@@ -287,6 +287,10 @@ const radioStore = {
         await a.play();
       }
     } catch (err) {
+<<<<<<< HEAD
+=======
+      console.log("Playback error:", err);
+>>>>>>> origin/main
       this.emit({ onAir: false });
     }
   },

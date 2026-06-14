@@ -1,7 +1,14 @@
+<<<<<<< HEAD
 // Nexus AppLayout — Sidebar + Topbar + Embedded Chat System
 import { useState, useEffect, useRef } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+=======
+// Nexus AppLayout — Sidebar + Topbar (fixed lucide imports)
+import { useState, useEffect } from "react";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+>>>>>>> origin/main
 import {
 	LayoutDashboard,
 	Users,
@@ -40,22 +47,29 @@ import {
 	Siren,
 	TriangleAlert,
 	Tv2,
+<<<<<<< HEAD
 	Moon,
 	Sun,
 	Accessibility,
 	SlidersHorizontal,
 	CheckCheck,
 	Type,
+=======
+>>>>>>> origin/main
 } from "lucide-react";
 import {
 	useAuthStore,
 	notificationsApi,
 	emergencyApi,
+<<<<<<< HEAD
 	api,
+=======
+>>>>>>> origin/main
 } from "../../services/api";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 
+<<<<<<< HEAD
 // ── Chat imports ──────────────────────────────────────────────────────────────
 import ChatPanel from "../chat/ChatPanel";
 import { ChatTopbarButton } from "../chat/ChatTopbarButton";
@@ -412,6 +426,8 @@ function PreferencesModal({
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+=======
+>>>>>>> origin/main
 interface NavItem {
 	label: string;
 	icon: React.ElementType;
@@ -600,6 +616,7 @@ function NavSection({ item, depth = 0 }: { item: NavItem; depth?: number }) {
 	);
 }
 
+<<<<<<< HEAD
 /** Derives a readable page name from the current URL path */
 function PageBreadcrumb() {
 	const location = useLocation();
@@ -694,12 +711,20 @@ export default function AppLayout() {
 		}
 		localStorage.setItem("nexus-theme", isDark ? "dark" : "light");
 	}, [isDark]);
+=======
+export default function AppLayout() {
+	const { user, logout, refreshToken } = useAuthStore();
+	const navigate = useNavigate();
+	const [sidebarOpen, setSidebarOpen] = useState(false);
+	const [showUserMenu, setShowUserMenu] = useState(false);
+>>>>>>> origin/main
 
 	const { data: unreadCount = 0 } = useQuery({
 		queryKey: ["unread-notifications"],
 		queryFn: () => notificationsApi.unreadCount().then((r) => r.data.count),
 		refetchInterval: 30000,
 	});
+<<<<<<< HEAD
 	const { data: recentNotifications = [] } = useQuery({
 		queryKey: ["notifications-preview"],
 		queryFn: () =>
@@ -719,6 +744,8 @@ export default function AppLayout() {
 			toast.success("All notifications marked as read");
 		},
 	});
+=======
+>>>>>>> origin/main
 
 	const { data: emergencyAlerts = [] } = useQuery({
 		queryKey: ["emergency-alerts"],
@@ -735,14 +762,25 @@ export default function AppLayout() {
 				);
 			}
 		} catch {}
+<<<<<<< HEAD
 		// Reset font so the next user on this browser starts clean
 		applyFont("default");
+=======
+>>>>>>> origin/main
 		logout();
 		navigate("/login");
 		toast.success("Logged out successfully");
 	};
 
+<<<<<<< HEAD
 	const handleToggleDark = () => setIsDark((d) => !d);
+=======
+	const isAdminOrHR = [
+		"system_admin",
+		"broadcast_admin",
+		"hr_officer",
+	].includes(user?.role || "");
+>>>>>>> origin/main
 
 	return (
 		<div className="flex h-screen bg-surface overflow-hidden">
@@ -767,10 +805,17 @@ export default function AppLayout() {
 					</div>
 					<div>
 						<div className="font-display font-bold text-white text-base leading-none">
+<<<<<<< HEAD
 							Swahilipot
 						</div>
 						<div className="text-[10px] text-slate-500 tracking-widest uppercase mt-0.5">
 							Foundation
+=======
+							Nexus
+						</div>
+						<div className="text-[10px] text-slate-500 tracking-widest uppercase mt-0.5">
+							Enterprise
+>>>>>>> origin/main
 						</div>
 					</div>
 					<button
@@ -806,23 +851,34 @@ export default function AppLayout() {
 
 				{/* User */}
 				<div className="border-t border-surface-border p-3">
+<<<<<<< HEAD
 					<NavLink
 						to="/profile"
 						className={({ isActive }) =>
 							clsx("sidebar-link", isActive && "active")
 						}>
+=======
+					<div
+						className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-elevated cursor-pointer"
+						onClick={() => navigate("/profile")}>
+>>>>>>> origin/main
 						<div className="w-9 h-9 rounded-full bg-gradient-Nexus flex items-center justify-center text-sm font-bold text-white shrink-0">
 							{user?.first_name?.[0]}
 							{user?.last_name?.[0]}
 						</div>
 						<div className="flex-1 min-w-0">
+<<<<<<< HEAD
 							<div className="text-sm font-medium truncate">
+=======
+							<div className="text-sm font-medium text-white truncate">
+>>>>>>> origin/main
 								{user?.full_name}
 							</div>
 							<div className="text-[10px] text-slate-500">
 								{user?.role_display}
 							</div>
 						</div>
+<<<<<<< HEAD
 					</NavLink>
 					<button
 						onClick={handleLogout}
@@ -835,6 +891,12 @@ export default function AppLayout() {
 							e.currentTarget.style.background = "transparent";
 							e.currentTarget.style.color = "";
 						}}>
+=======
+					</div>
+					<button
+						onClick={handleLogout}
+						className="sidebar-link w-full mt-1 text-red-400 hover:text-red-300 hover:bg-red-900/20">
+>>>>>>> origin/main
 						<LogOut size={15} />
 						<span>Logout</span>
 					</button>
@@ -844,6 +906,7 @@ export default function AppLayout() {
 			{/* ── Main ── */}
 			<div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 				{/* Topbar */}
+<<<<<<< HEAD
 				<header className="flex items-center gap-2 px-4 py-0 h-12 border-b border-surface-border bg-surface-card shrink-0 z-10 relative">
 					<button
 						className="lg:hidden shrink-0 p-1.5 rounded-lg hover:bg-surface-elevated transition-colors"
@@ -854,19 +917,33 @@ export default function AppLayout() {
 					{/* Breadcrumb */}
 					<PageBreadcrumb />
 
+=======
+				<header className="flex items-center gap-4 px-6 py-3.5 border-b border-surface-border bg-surface-card shrink-0">
+					<button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+						<Menu size={20} className="text-slate-400" />
+					</button>
+
+>>>>>>> origin/main
 					<div className="flex-1" />
 
 					{/* Emergency alert badge */}
 					{emergencyAlerts.length > 0 && (
 						<button
 							onClick={() => navigate("/emergency-alerts")}
+<<<<<<< HEAD
 							className="flex items-center gap-1.5 px-2.5 py-1 bg-red-900/30 border border-red-500/40 rounded-lg text-red-400 text-xs font-semibold animate-pulse">
 							<AlertTriangle size={13} />
 							{emergencyAlerts.length} Alert
+=======
+							className="flex items-center gap-2 px-3 py-1.5 bg-red-900/30 border border-red-500/40 rounded-lg text-red-400 text-xs font-semibold animate-pulse">
+							<AlertTriangle size={14} />
+							{emergencyAlerts.length} Active Alert
+>>>>>>> origin/main
 							{emergencyAlerts.length > 1 ? "s" : ""}
 						</button>
 					)}
 
+<<<<<<< HEAD
 					{/* ── Chat button with badge ── */}
 					<ChatTopbarButton />
 
@@ -983,19 +1060,39 @@ export default function AppLayout() {
 							</>
 						)}
 					</div>
+=======
+					{/* Notifications */}
+					<button
+						onClick={() => navigate("/notifications")}
+						className="relative btn-icon btn-secondary">
+						<Bell size={16} />
+						{unreadCount > 0 && (
+							<span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold">
+								{unreadCount > 9 ? "9+" : unreadCount}
+							</span>
+						)}
+					</button>
+>>>>>>> origin/main
 
 					{/* Profile dropdown */}
 					<div className="relative">
 						<button
+<<<<<<< HEAD
 							className="flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-lg hover:bg-surface-elevated transition-colors"
 							onClick={() => setShowUserMenu(!showUserMenu)}>
 							<div className="w-6 h-6 rounded-full bg-gradient-Nexus flex items-center justify-center text-[10px] font-bold text-white">
+=======
+							className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-surface-elevated transition-colors"
+							onClick={() => setShowUserMenu(!showUserMenu)}>
+							<div className="w-7 h-7 rounded-full bg-gradient-Nexus flex items-center justify-center text-xs font-bold text-white">
+>>>>>>> origin/main
 								{user?.first_name?.[0]}
 								{user?.last_name?.[0]}
 							</div>
 							<span className="text-sm text-slate-300 hidden sm:block">
 								{user?.first_name}
 							</span>
+<<<<<<< HEAD
 							<ChevronDown size={12} className="text-slate-500" />
 						</button>
 
@@ -1068,6 +1165,37 @@ export default function AppLayout() {
 									</button>
 								</div>
 							</>
+=======
+							<ChevronDown size={13} className="text-slate-500" />
+						</button>
+
+						{showUserMenu && (
+							<div className="absolute right-0 top-full mt-2 w-48 bg-surface-elevated border border-surface-border rounded-xl shadow-elevated z-50 py-1 animate-fade-in">
+								<NavLink
+									to="/profile"
+									className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-surface-muted transition-colors"
+									onClick={() => setShowUserMenu(false)}>
+									<User size={14} /> My Profile
+								</NavLink>
+
+								{/* Settings only visible to non-attachee roles */}
+								{user?.role === "system_admin" && (
+									<NavLink
+										to="/settings"
+										className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-surface-muted transition-colors"
+										onClick={() => setShowUserMenu(false)}>
+										<Settings size={14} /> Settings
+									</NavLink>
+								)}
+
+								<div className="border-t border-surface-border my-1" />
+								<button
+									onClick={handleLogout}
+									className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/20 transition-colors">
+									<LogOut size={14} /> Logout
+								</button>
+							</div>
+>>>>>>> origin/main
 						)}
 					</div>
 				</header>
@@ -1077,6 +1205,7 @@ export default function AppLayout() {
 					<Outlet />
 				</main>
 			</div>
+<<<<<<< HEAD
 
 			{/* ── Chat Panel (fixed, floating) ── */}
 			<ChatPanel />
@@ -1095,6 +1224,8 @@ export default function AppLayout() {
 					onClose={() => setShowPreferences(false)}
 				/>
 			)}
+=======
+>>>>>>> origin/main
 		</div>
 	);
 }

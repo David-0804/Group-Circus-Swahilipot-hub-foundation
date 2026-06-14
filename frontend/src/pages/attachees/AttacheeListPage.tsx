@@ -1,15 +1,26 @@
+<<<<<<< HEAD
 // Nexus — Attachee Management (full-featured)
 // Bulk import (CSV/XLSX), supervisor assign/deassign, activate/deactivate
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+=======
+// Swahilipot — Attachee Management
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+>>>>>>> origin/main
 import { format, parseISO } from "date-fns";
 import {
 	GraduationCap,
 	Search,
+<<<<<<< HEAD
+=======
+	Filter,
+>>>>>>> origin/main
 	Eye,
 	UserPlus,
 	Download,
 	BarChart3,
+<<<<<<< HEAD
 	Upload,
 	X,
 	CheckCircle,
@@ -454,12 +465,29 @@ export default function AttacheeListPage() {
 		refetch,
 	} = useQuery({
 		queryKey: ["users", "attachee", search, deptFilter, statusFilter],
+=======
+	Calendar,
+} from "lucide-react";
+import { usersApi, hrApi } from "../../services/api";
+import { useAuthStore } from "../../services/api";
+import clsx from "clsx";
+
+export default function AttacheeListPage() {
+	const { user } = useAuthStore();
+	const [search, setSearch] = useState("");
+	const [deptFilter, setDeptFilter] = useState("");
+	const [selectedAttachee, setSelectedAttachee] = useState<any>(null);
+
+	const { data: attachees = [], isLoading } = useQuery({
+		queryKey: ["users", "attachee", search, deptFilter],
+>>>>>>> origin/main
 		queryFn: () =>
 			usersApi
 				.list({
 					role: "attachee",
 					search: search || undefined,
 					department: deptFilter || undefined,
+<<<<<<< HEAD
 					is_active:
 						statusFilter === "active"
 							? true
@@ -469,10 +497,16 @@ export default function AttacheeListPage() {
 				})
 				.then((r) => r.data.results ?? r.data),
 		refetchInterval: 120_000,
+=======
+				})
+				.then((r) => r.data.results || r.data),
+		refetchInterval: 120000,
+>>>>>>> origin/main
 	});
 
 	const { data: departments = [] } = useQuery({
 		queryKey: ["departments"],
+<<<<<<< HEAD
 		queryFn: () => hrApi.departments().then((r) => r.data.results ?? r.data),
 	});
 
@@ -635,6 +669,77 @@ export default function AttacheeListPage() {
 			{/* ── Stats ── */}
 			<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
 				{stats.map(({ label, value, color }) => (
+=======
+		queryFn: () => hrApi.departments().then((r) => r.data.results || r.data),
+	});
+
+	const isAdmin = [
+		"hr_officer",
+		"system_admin",
+		"executive",
+		"supervisor",
+		"department_leader",
+		"broadcast_admin",
+	].includes(user?.role || "");
+
+	return (
+		<div className="space-y-6 animate-fade-in">
+			<div className="page-header">
+				<div>
+					<h1 className="page-title flex items-center gap-2">
+						<GraduationCap size={22} className="text-Swahilipot-400" /> Attachee
+						Management
+					</h1>
+					<p className="page-subtitle">
+						All industrial attachment placements, progress, and department
+						assignments
+					</p>
+				</div>
+				{isAdmin && (
+					<div className="flex gap-2">
+						<button className="btn-secondary btn-sm">
+							<Download size={13} /> Export
+						</button>
+						<button className="btn-primary btn-sm">
+							<UserPlus size={13} /> Add Attachee
+						</button>
+					</div>
+				)}
+			</div>
+
+			{/* Stats */}
+			<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+				{[
+					{
+						label: "Total Attachees",
+						value: attachees.length,
+						color: "text-white",
+					},
+					{
+						label: "Active",
+						value: attachees.filter((a: any) => a.is_active).length,
+						color: "text-green-400",
+					},
+					{
+						label: "This Month",
+						value: attachees.filter((a: any) => {
+							if (!a.date_joined) return false;
+							const joined = parseISO(a.date_joined);
+							const now = new Date();
+							return (
+								joined.getMonth() === now.getMonth() &&
+								joined.getFullYear() === now.getFullYear()
+							);
+						}).length,
+						color: "text-blue-400",
+					},
+					{
+						label: "Departments",
+						value: departments.length,
+						color: "text-purple-400",
+					},
+				].map(({ label, value, color }) => (
+>>>>>>> origin/main
 					<div key={label} className="stat-card">
 						<div className={clsx("stat-value", color)}>{value}</div>
 						<div className="stat-label">{label}</div>
@@ -642,7 +747,11 @@ export default function AttacheeListPage() {
 				))}
 			</div>
 
+<<<<<<< HEAD
 			{/* ── Filters ── */}
+=======
+			{/* Filters */}
+>>>>>>> origin/main
 			<div className="flex flex-wrap gap-3">
 				<div className="relative flex-1 min-w-48">
 					<Search
@@ -652,7 +761,11 @@ export default function AttacheeListPage() {
 					<input
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
+<<<<<<< HEAD
 						placeholder="Search by name or email…"
+=======
+						placeholder="Search by name or email..."
+>>>>>>> origin/main
 						className="input pl-9 py-2"
 					/>
 				</div>
@@ -661,12 +774,17 @@ export default function AttacheeListPage() {
 					onChange={(e) => setDeptFilter(e.target.value)}
 					className="select-input w-44">
 					<option value="">All Departments</option>
+<<<<<<< HEAD
 					{(departments as any[]).map((d) => (
+=======
+					{departments.map((d: any) => (
+>>>>>>> origin/main
 						<option key={d.id} value={d.id}>
 							{d.name}
 						</option>
 					))}
 				</select>
+<<<<<<< HEAD
 				<select
 					value={statusFilter}
 					onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -684,6 +802,11 @@ export default function AttacheeListPage() {
 			</div>
 
 			{/* ── Table ── */}
+=======
+			</div>
+
+			{/* Table */}
+>>>>>>> origin/main
 			<div className="card">
 				<div className="overflow-x-auto">
 					<table className="data-table">
@@ -693,24 +816,40 @@ export default function AttacheeListPage() {
 								<th>Employee ID</th>
 								<th>Department</th>
 								<th>Branch</th>
+<<<<<<< HEAD
 								<th>Supervisor</th>
 								<th>Status</th>
 								<th>Date Joined</th>
 								{canManage && <th>Actions</th>}
+=======
+								<th>Status</th>
+								<th>Date Joined</th>
+								{isAdmin && <th>Actions</th>}
+>>>>>>> origin/main
 							</tr>
 						</thead>
 						<tbody>
 							{isLoading ? (
 								[...Array(8)].map((_, i) => (
 									<tr key={i}>
+<<<<<<< HEAD
 										<td colSpan={8}>
+=======
+										<td colSpan={7}>
+>>>>>>> origin/main
 											<div className="skeleton h-8 w-full my-1" />
 										</td>
 									</tr>
 								))
+<<<<<<< HEAD
 							) : (attachees as Attachee[]).length === 0 ? (
 								<tr>
 									<td colSpan={8} className="text-center py-12 text-slate-500">
+=======
+							) : attachees.length === 0 ? (
+								<tr>
+									<td colSpan={7} className="text-center py-12 text-slate-500">
+>>>>>>> origin/main
 										<GraduationCap
 											size={28}
 											className="mx-auto mb-2 opacity-30"
@@ -719,14 +858,23 @@ export default function AttacheeListPage() {
 									</td>
 								</tr>
 							) : (
+<<<<<<< HEAD
 								(attachees as Attachee[]).map((a) => (
 									<tr key={a.id} className={clsx(!a.is_active && "opacity-50")}>
+=======
+								attachees.map((a: any) => (
+									<tr key={a.id}>
+>>>>>>> origin/main
 										<td>
 											<div className="flex items-center gap-3">
 												<div className="w-8 h-8 rounded-full bg-gradient-Swahilipot flex items-center justify-center text-xs font-bold text-white shrink-0">
 													{a.full_name
 														?.split(" ")
+<<<<<<< HEAD
 														.map((n) => n[0])
+=======
+														.map((n: string) => n[0])
+>>>>>>> origin/main
 														.join("")
 														.slice(0, 2)}
 												</div>
@@ -749,6 +897,7 @@ export default function AttacheeListPage() {
 										<td className="text-slate-400 text-sm">
 											{a.branch_name || "—"}
 										</td>
+<<<<<<< HEAD
 										<td className="text-slate-400 text-sm">
 											{a.supervisor_name ? (
 												<span className="flex items-center gap-1.5">
@@ -761,6 +910,8 @@ export default function AttacheeListPage() {
 												</span>
 											)}
 										</td>
+=======
+>>>>>>> origin/main
 										<td>
 											<span
 												className={clsx(
@@ -775,6 +926,7 @@ export default function AttacheeListPage() {
 												? format(parseISO(a.date_joined), "dd MMM yyyy")
 												: "—"}
 										</td>
+<<<<<<< HEAD
 										{canManage && (
 											<td>
 												<div className="flex items-center gap-1">
@@ -824,6 +976,15 @@ export default function AttacheeListPage() {
 														)}
 													</button>
 												</div>
+=======
+										{isAdmin && (
+											<td>
+												<button
+													onClick={() => setSelectedAttachee(a)}
+													className="btn-ghost btn-sm p-1.5">
+													<Eye size={13} />
+												</button>
+>>>>>>> origin/main
 											</td>
 										)}
 									</tr>
@@ -834,7 +995,11 @@ export default function AttacheeListPage() {
 				</div>
 			</div>
 
+<<<<<<< HEAD
 			{/* ── Detail panel ── */}
+=======
+			{/* Detail panel */}
+>>>>>>> origin/main
 			{selectedAttachee && (
 				<div
 					className="modal-backdrop"
@@ -844,18 +1009,25 @@ export default function AttacheeListPage() {
 						onClick={(e) => e.stopPropagation()}>
 						<div className="modal-header">
 							<h3 className="font-semibold text-white">Attachee Profile</h3>
+<<<<<<< HEAD
 							<button
 								onClick={() => setSelectedAttachee(null)}
 								className="btn-ghost p-1.5">
 								<X size={14} />
 							</button>
+=======
+>>>>>>> origin/main
 						</div>
 						<div className="modal-body space-y-4">
 							<div className="flex items-center gap-4">
 								<div className="w-16 h-16 rounded-2xl bg-gradient-Swahilipot flex items-center justify-center text-xl font-bold text-white">
 									{selectedAttachee.full_name
 										?.split(" ")
+<<<<<<< HEAD
 										.map((n) => n[0])
+=======
+										.map((n: string) => n[0])
+>>>>>>> origin/main
 										.join("")
 										.slice(0, 2)}
 								</div>
@@ -877,7 +1049,10 @@ export default function AttacheeListPage() {
 									</span>
 								</div>
 							</div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 							<div className="grid grid-cols-2 gap-3 text-sm">
 								{[
 									["Department", selectedAttachee.department_name || "—"],
@@ -894,10 +1069,13 @@ export default function AttacheeListPage() {
 									],
 									["Phone", selectedAttachee.phone || "—"],
 									[
+<<<<<<< HEAD
 										"Supervisor",
 										selectedAttachee.supervisor_name || "Unassigned",
 									],
 									[
+=======
+>>>>>>> origin/main
 										"Last Active",
 										selectedAttachee.last_login
 											? format(
@@ -916,6 +1094,7 @@ export default function AttacheeListPage() {
 								))}
 							</div>
 						</div>
+<<<<<<< HEAD
 
 						<div className="modal-footer flex-wrap gap-2">
 							<button
@@ -961,11 +1140,22 @@ export default function AttacheeListPage() {
 							)}
 							<button className="btn-primary btn-sm ml-auto">
 								<BarChart3 size={13} /> Progress
+=======
+						<div className="modal-footer">
+							<button
+								onClick={() => setSelectedAttachee(null)}
+								className="btn-secondary">
+								Close
+							</button>
+							<button className="btn-primary btn-sm">
+								<BarChart3 size={13} /> View Progress
+>>>>>>> origin/main
 							</button>
 						</div>
 					</div>
 				</div>
 			)}
+<<<<<<< HEAD
 
 			{/* ── Import result modal ── */}
 			{importResult && (
@@ -988,6 +1178,8 @@ export default function AttacheeListPage() {
 					onDeassign={() => deassignMutation.mutate(assignTarget.id)}
 				/>
 			)}
+=======
+>>>>>>> origin/main
 		</div>
 	);
 }

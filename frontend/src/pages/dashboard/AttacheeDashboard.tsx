@@ -77,7 +77,11 @@ export default function AttacheeDashboard() {
 			{/* Header */}
 			<div>
 				<h1 className="page-title">
+<<<<<<< HEAD
 					Good {getGreeting()}, {user?.first_name} 
+=======
+					Good {getGreeting()}, {user?.first_name} 👋
+>>>>>>> origin/main
 				</h1>
 				<p className="page-subtitle">
 					{format(new Date(), "EEEE, MMMM d yyyy")} ·{" "}

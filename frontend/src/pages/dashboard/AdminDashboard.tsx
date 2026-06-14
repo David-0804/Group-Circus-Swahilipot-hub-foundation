@@ -90,6 +90,10 @@ export default function AdminDashboard() {
 		refetchInterval: 60000,
 	});
 
+<<<<<<< HEAD
+=======
+	console.log("ACTIVITY:", activityData);
+>>>>>>> origin/main
 
 	const recentActivity = Array.isArray(activityData)
 		? activityData
@@ -116,7 +120,11 @@ export default function AdminDashboard() {
 			<div className="flex items-start justify-between">
 				<div>
 					<h1 className="page-title">
+<<<<<<< HEAD
 						Good {getGreeting()}, {user?.first_name} 
+=======
+						Good {getGreeting()}, {user?.first_name} 👋
+>>>>>>> origin/main
 					</h1>
 					<p className="page-subtitle">
 						{format(new Date(), "EEEE, MMMM d yyyy")} ·{" "}

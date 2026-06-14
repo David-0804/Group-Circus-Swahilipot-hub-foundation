@@ -18,7 +18,11 @@ User = get_user_model()
 
 # ── Organisation ─────────────────────────────────────────────────────────────
 class OrganisationSerializer(serializers.ModelSerializer):
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = Organisation
         fields = '__all__'
 
@@ -34,7 +38,11 @@ class OrganisationView(generics.RetrieveUpdateAPIView):
 class BranchSerializer(serializers.ModelSerializer):
     user_count = serializers.SerializerMethodField()
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = Branch
         fields = '__all__'
 
@@ -64,7 +72,11 @@ class DepartmentSerializer(serializers.ModelSerializer):
     user_count = serializers.SerializerMethodField()
     branch_name = serializers.CharField(source='branch.name', read_only=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = Department
         fields = '__all__'
 
@@ -224,7 +236,11 @@ class MFADisableView(APIView):
 
 # ── Sessions ──────────────────────────────────────────────────────────────────
 class UserSessionSerializer(serializers.ModelSerializer):
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = UserSession
         fields = '__all__'
         read_only_fields = ['user']
@@ -252,7 +268,11 @@ class RevokeSessionView(APIView):
 class AuditLogSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.full_name', read_only=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = AuditLog
         fields = '__all__'
 

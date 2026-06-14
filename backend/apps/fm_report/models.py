@@ -54,7 +54,11 @@ class FMOutage(TimeStampedModel):
     ], default='moderate')
     alert_sent = models.BooleanField(default=False)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         ordering = ['-down_at']
 
     def __str__(self):
@@ -80,7 +84,11 @@ class FMHeartbeat(TimeStampedModel):
     response_ms = models.IntegerField(null=True, blank=True)
     success = models.BooleanField(default=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         ordering = ['-received_at']
 
 
@@ -112,7 +120,11 @@ class EmergencyAlert(TimeStampedModel):
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolution_notes = models.TextField(blank=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         ordering = ['-created_at']
 
 
@@ -123,7 +135,11 @@ class FMStationSerializer(serializers.ModelSerializer):
     active_outage = serializers.SerializerMethodField()
     time_since_change = serializers.SerializerMethodField()
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = FMStation
         fields = '__all__'
 
@@ -155,7 +171,11 @@ class FMOutageSerializer(serializers.ModelSerializer):
     resolved_by_name = serializers.CharField(source='resolved_by.full_name', read_only=True)
     station_name = serializers.CharField(source='station.name', read_only=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = FMOutage
         fields = '__all__'
         read_only_fields = ['duration_minutes', 'auto_detected', 'alert_sent']
@@ -165,7 +185,11 @@ class EmergencyAlertSerializer(serializers.ModelSerializer):
     triggered_by_name = serializers.CharField(source='triggered_by.full_name', read_only=True)
     acknowledged_count = serializers.SerializerMethodField()
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = EmergencyAlert
         fields = '__all__'
         read_only_fields = ['notified_emails', 'notified_phones']
@@ -317,6 +341,7 @@ class EmergencyAlertView(APIView):
 class AcknowledgeAlertView(APIView):
     def post(self, request, alert_id):
         try:
+<<<<<<< HEAD
 
             alert = EmergencyAlert.objects.get(
                 id=alert_id, organisation=request.user.organisation
@@ -327,6 +352,11 @@ class AcknowledgeAlertView(APIView):
             alert.resolved_at = timezone.now()
             alert.save(update_fields=['resolved', 'resolved_at'])
             return Response(EmergencyAlertSerializer(alert).data)
+=======
+            alert = EmergencyAlert.objects.get(id=alert_id, organisation=request.user.organisation)
+            alert.acknowledged_by.add(request.user)
+            return Response({'acknowledged': True})
+>>>>>>> origin/main
         except EmergencyAlert.DoesNotExist:
             return Response({'detail': 'Not found'}, status=404)
 

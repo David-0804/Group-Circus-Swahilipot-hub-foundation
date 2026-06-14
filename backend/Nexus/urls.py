@@ -62,7 +62,10 @@ urlpatterns = [
     path('api/v1/videography/', include('apps.videography.urls')),
     path('api/v1/broadcast/', include('apps.broadcast.urls')),
     path('api/v1/admin-dashboard/', include('apps.broadcast.dashboard_urls')),
+<<<<<<< HEAD
     path('api/v1/chat/', include('apps.chat.urls')),
+=======
+>>>>>>> origin/main
 ]
 
 if settings.DEBUG:

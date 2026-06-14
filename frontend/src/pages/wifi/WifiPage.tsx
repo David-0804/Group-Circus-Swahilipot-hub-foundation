@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Nexus - Wi-Fi Access Management
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -187,6 +188,26 @@ function WifiRequestModal({ onClose }: { onClose: () => void }) {
 }
 
 // Main Page
+=======
+// Nexus — Wi-Fi Access Management
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format, parseISO } from "date-fns";
+import {
+	Wifi,
+	Plus,
+	Monitor,
+	Clock,
+	CheckCircle,
+	XCircle,
+	Trash2,
+} from "lucide-react";
+import { wifiApi } from "../../services/api";
+import { useAuthStore } from "../../services/api";
+import toast from "react-hot-toast";
+import clsx from "clsx";
+
+>>>>>>> origin/main
 export default function WifiPage() {
 	const { user } = useAuthStore();
 	const qc = useQueryClient();
@@ -208,13 +229,21 @@ export default function WifiPage() {
 			: [];
 
 	const approveMutation = useMutation({
+<<<<<<< HEAD
 		mutationFn: ({ id, action }: { id: string; action: string }) =>
 			wifiApi.approve(id, { action }),
+=======
+		mutationFn: ({ id, action }: any) => wifiApi.approve(id, { action }),
+>>>>>>> origin/main
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["wifi-grants"] });
 			toast.success("Wi-Fi request updated");
 		},
+<<<<<<< HEAD
 		onError: (e: any) => toast.error(parseDrfError(e)),
+=======
+		onError: (e: any) => toast.error(e.response?.data?.detail || "Failed"),
+>>>>>>> origin/main
 	});
 
 	const revokeMutation = useMutation({
@@ -223,7 +252,10 @@ export default function WifiPage() {
 			qc.invalidateQueries({ queryKey: ["wifi-grants"] });
 			toast.success("Access revoked");
 		},
+<<<<<<< HEAD
 		onError: (e: any) => toast.error(parseDrfError(e)),
+=======
+>>>>>>> origin/main
 	});
 
 	const active = grants.filter((g: any) => g.status === "approved");
@@ -299,13 +331,21 @@ export default function WifiPage() {
 								grants.map((g: any) => (
 									<tr key={g.id}>
 										<td className="text-white font-medium text-sm">
+<<<<<<< HEAD
 											{g.requester_name || g.requested_by_name || "-"}
+=======
+											{g.requester_name || g.requested_by_name || "—"}
+>>>>>>> origin/main
 										</td>
 										<td className="text-slate-300 text-sm capitalize">
 											{g.device_type}
 										</td>
 										<td className="font-mono text-xs text-slate-400">
+<<<<<<< HEAD
 											{g.mac_address || "-"}
+=======
+											{g.mac_address || "—"}
+>>>>>>> origin/main
 										</td>
 										<td className="text-slate-400 text-sm max-w-xs truncate">
 											{g.purpose}
@@ -338,8 +378,12 @@ export default function WifiPage() {
 																		action: "approve",
 																	})
 																}
+<<<<<<< HEAD
 																className="btn-success btn-sm p-1"
 																title="Approve">
+=======
+																className="btn-success btn-sm p-1">
+>>>>>>> origin/main
 																<CheckCircle size={12} />
 															</button>
 															<button
@@ -349,8 +393,12 @@ export default function WifiPage() {
 																		action: "reject",
 																	})
 																}
+<<<<<<< HEAD
 																className="btn-danger btn-sm p-1"
 																title="Reject">
+=======
+																className="btn-danger btn-sm p-1">
+>>>>>>> origin/main
 																<XCircle size={12} />
 															</button>
 														</>
@@ -373,10 +421,72 @@ export default function WifiPage() {
 					</table>
 				</div>
 			</div>
+<<<<<<< HEAD
 
 			{showRequestModal && (
 				<WifiRequestModal onClose={() => setShowRequestModal(false)} />
 			)}
+=======
+		</div>
+	);
+}
+
+function RequestSeatModal({ sub, onClose, onSuccess }: any) {
+	const [purpose, setPurpose] = useState("");
+	const mutation = useMutation({
+		mutationFn: (data: any) =>
+			import("../../services/api").then((m) =>
+				m.subscriptionsApi.requestSeat(sub.id, data),
+			),
+		onSuccess: () => {
+			toast.success("Access request submitted!");
+			onSuccess();
+		},
+		onError: (e: any) => toast.error(e.response?.data?.detail || "Failed"),
+	});
+	return (
+		<div className="modal-backdrop" onClick={onClose}>
+			<div className="modal-box max-w-md" onClick={(e) => e.stopPropagation()}>
+				<div className="modal-header">
+					<h3 className="font-semibold text-white">
+						Request Access — {sub.software_name}
+					</h3>
+				</div>
+				<div className="modal-body space-y-4">
+					<div className="card bg-surface/60">
+						<div className="text-slate-400 text-sm">
+							Available seats:{" "}
+							<span className="text-white font-medium">
+								{sub.available_seats} / {sub.total_seats}
+							</span>
+						</div>
+					</div>
+					<div className="input-group">
+						<label className="input-label">
+							Purpose / Why do you need access? *
+						</label>
+						<textarea
+							value={purpose}
+							onChange={(e) => setPurpose(e.target.value)}
+							rows={3}
+							className="textarea"
+							placeholder="Explain how you will use this software..."
+						/>
+					</div>
+				</div>
+				<div className="modal-footer">
+					<button onClick={onClose} className="btn-secondary">
+						Cancel
+					</button>
+					<button
+						disabled={!purpose.trim() || mutation.isPending}
+						onClick={() => mutation.mutate({ purpose })}
+						className="btn-primary">
+						{mutation.isPending ? "Submitting..." : "Submit Request"}
+					</button>
+				</div>
+			</div>
+>>>>>>> origin/main
 		</div>
 	);
 }

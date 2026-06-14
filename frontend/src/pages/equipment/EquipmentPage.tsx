@@ -128,6 +128,10 @@ export default function EquipmentPage() {
 			);
 		},
 		onError: (e: any) => {
+<<<<<<< HEAD
+=======
+			console.log(e.response?.data);
+>>>>>>> origin/main
 
 			const detail = e.response?.data?.detail;
 
@@ -650,6 +654,11 @@ function CheckoutModal({ item, onClose, onSuccess }: any) {
 			onSuccess();
 		},
 		onError: (e: any) => {
+<<<<<<< HEAD
+=======
+			console.log(e.response?.data);
+
+>>>>>>> origin/main
 			const detail = e.response?.data?.detail;
 
 			const message =
@@ -750,6 +759,10 @@ function AddEquipmentModal({ categories, onClose, onSuccess }: any) {
 			onSuccess();
 		},
 		onError: (e: any) => {
+<<<<<<< HEAD
+=======
+			console.log(e.response?.data);
+>>>>>>> origin/main
 
 			const detail = e.response?.data?.detail;
 

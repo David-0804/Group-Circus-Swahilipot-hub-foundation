@@ -47,7 +47,11 @@ class Notification(TimeStampedModel):
     push_sent    = models.BooleanField(default=False)
     email_sent   = models.BooleanField(default=False)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['recipient', 'read']),
@@ -85,14 +89,22 @@ class NotificationPreference(TimeStampedModel):
 # ─── SERIALIZERS ─────────────────────────────────────────────────────────────
 
 class NotificationSerializer(serializers.ModelSerializer):
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = Notification
         fields = '__all__'
         read_only_fields = ['recipient', 'created_at']
 
 
 class NotificationPreferenceSerializer(serializers.ModelSerializer):
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = NotificationPreference
         fields = '__all__'
         read_only_fields = ['user']
@@ -111,10 +123,13 @@ class NotificationListView(generics.ListAPIView):
             qs = qs.filter(read=False)
         if ntype:
             qs = qs.filter(notification_type=ntype)
+<<<<<<< HEAD
 
         urgent_only = self.request.query_params.get('urgent')
         if urgent_only == 'true':
             qs = qs.filter(is_urgent=True)
+=======
+>>>>>>> origin/main
         return qs
 
 
@@ -131,6 +146,7 @@ class NotificationDetailView(generics.RetrieveUpdateAPIView):
             instance.save(update_fields=['read_at'])
 
 
+<<<<<<< HEAD
 class MarkReadView(APIView):
     def post(self, request, pk):
         try:
@@ -141,6 +157,8 @@ class MarkReadView(APIView):
             return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
         
 
+=======
+>>>>>>> origin/main
 class MarkAllReadView(APIView):
     def post(self, request):
         updated = Notification.objects.filter(recipient=request.user, read=False).update(

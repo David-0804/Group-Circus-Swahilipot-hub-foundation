@@ -37,7 +37,11 @@ class Certificate(TimeStampedModel):
     pdf_file            = models.FileField(upload_to='certificates/pdfs/', null=True, blank=True)
     notes               = models.TextField(blank=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['organisation', 'status']),
@@ -67,7 +71,11 @@ class Badge(TimeStampedModel):
     icon          = models.CharField(max_length=100, blank=True)
     awarded_date  = models.DateField(default=timezone.now)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         ordering = ['-awarded_date']
 
     def __str__(self):
@@ -80,7 +88,11 @@ class CertificateSerializer(serializers.ModelSerializer):
     recipient_name  = serializers.CharField(source='recipient.full_name', read_only=True)
     issued_by_name  = serializers.CharField(source='issued_by.full_name',  read_only=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model  = Certificate
         fields = '__all__'
         read_only_fields = ['organisation', 'certificate_number', 'qr_verification_code', 'issued_by', 'status']
@@ -89,7 +101,11 @@ class CertificateSerializer(serializers.ModelSerializer):
 class BadgeSerializer(serializers.ModelSerializer):
     recipient_name = serializers.CharField(source='recipient.full_name', read_only=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model  = Badge
         fields = '__all__'
         read_only_fields = ['organisation']
@@ -199,6 +215,7 @@ class DownloadCertificateView(APIView):
 
 
 def _generate_pdf(cert: Certificate) -> bytes:
+<<<<<<< HEAD
     """
     Generate a production-quality certificate PDF styled after the classic academic
     certificate design:
@@ -265,15 +282,36 @@ def _generate_pdf(cert: Certificate) -> bytes:
 
     # ── QR Code ───────────────────────────────────────────────────────────────
     verify_url = f"http://localhost:5173/verify/{cert.qr_verification_code}"
+=======
+    """Generate a professional certificate PDF with QR code using reportlab canvas."""
+    import qrcode
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm, mm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    W, H = landscape(A4)  # 841.9 x 595.3 pts
+
+    verify_url = f"http://localhost:5173/verify/{cert.qr_verification_code}"
+
+    # ── QR Code ──────────────────────────────────────────────────────────────
+>>>>>>> origin/main
     qr = qrcode.QRCode(version=2, box_size=8, border=2,
                        error_correction=qrcode.constants.ERROR_CORRECT_H)
     qr.add_data(verify_url)
     qr.make(fit=True)
+<<<<<<< HEAD
     qr_img    = qr.make_image(fill_color=(40, 60, 80), back_color=(255, 255, 255))
+=======
+    qr_img    = qr.make_image(fill_color=(30, 58, 95), back_color=(255, 255, 255))
+>>>>>>> origin/main
     qr_buffer = BytesIO()
     qr_img.save(qr_buffer, format='PNG')
     qr_buffer.seek(0)
 
+<<<<<<< HEAD
     W, H = landscape(A4)
     cx   = W / 2
     buf  = BytesIO()
@@ -485,6 +523,184 @@ def _generate_pdf(cert: Certificate) -> bytes:
 
     c.save()
     return buf.getvalue()
+=======
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=landscape(A4))
+
+    # ── Colour palette ───────────────────────────────────────────────────────
+    navy      = colors.HexColor('#1e3a5f')
+    gold      = colors.HexColor('#c9a84c')
+    light_bg  = colors.HexColor('#f7f4ef')
+    mid_grey  = colors.HexColor('#666666')
+    dark_text = colors.HexColor('#1a1a2e')
+    white     = colors.white
+
+    # ── Background ───────────────────────────────────────────────────────────
+    c.setFillColor(light_bg)
+    c.rect(0, 0, W, H, fill=1, stroke=0)
+
+    # Left navy sidebar
+    c.setFillColor(navy)
+    c.rect(0, 0, 2.2*cm, H, fill=1, stroke=0)
+
+    # Right navy sidebar
+    c.rect(W - 2.2*cm, 0, 2.2*cm, H, fill=1, stroke=0)
+
+    # Top gold bar
+    c.setFillColor(gold)
+    c.rect(2.2*cm, H - 1.0*cm, W - 4.4*cm, 1.0*cm, fill=1, stroke=0)
+
+    # Bottom gold bar
+    c.rect(2.2*cm, 0, W - 4.4*cm, 0.7*cm, fill=1, stroke=0)
+
+    # ── Outer border lines ───────────────────────────────────────────────────
+    c.setStrokeColor(gold)
+    c.setLineWidth(2.5)
+    margin = 2.6*cm
+    c.rect(margin, 0.9*cm, W - 2*margin, H - 1.1*cm, fill=0, stroke=1)
+
+    # Inner thin border
+    c.setLineWidth(0.8)
+    inner = 3.0*cm
+    c.rect(inner, 1.3*cm, W - 2*inner, H - 1.8*cm, fill=0, stroke=1)
+
+    # ── Decorative corner marks ───────────────────────────────────────────────
+    c.setStrokeColor(gold)
+    c.setLineWidth(1.5)
+    for x, y, dx, dy in [
+        (inner+0.3*cm, H-1.5*cm,  0.8*cm, 0),   # top-left h
+        (inner+0.3*cm, H-1.5*cm,  0, -0.8*cm),  # top-left v
+        (W-inner-1.1*cm, H-1.5*cm, 0.8*cm, 0),  # top-right h
+        (W-inner-1.1*cm, H-1.5*cm, 0, -0.8*cm), # top-right v
+        (inner+0.3*cm, 1.6*cm,    0.8*cm, 0),   # bot-left h
+        (inner+0.3*cm, 1.6*cm,    0, 0.8*cm),   # bot-left v
+        (W-inner-1.1*cm, 1.6*cm,  0.8*cm, 0),   # bot-right h
+        (W-inner-1.1*cm, 1.6*cm,  0, 0.8*cm),   # bot-right v
+    ]:
+        c.line(x, y, x+dx, y+dy)
+
+    # ── Sidebar text (rotated) ────────────────────────────────────────────────
+    c.saveState()
+    c.setFillColor(white)
+    c.setFont('Helvetica', 7)
+    c.translate(1.1*cm, H/2)
+    c.rotate(90)
+    c.drawCentredString(0, 0, 'NEXUS ENTERPRISE')
+    c.restoreState()
+
+    c.saveState()
+    c.setFillColor(white)
+    c.setFont('Helvetica', 7)
+    c.translate(W - 1.1*cm, H/2)
+    c.rotate(-90)
+    c.drawCentredString(0, 0, f'CERT NO: {cert.certificate_number}')
+    c.restoreState()
+
+    # ── Organisation name (top gold bar) ─────────────────────────────────────
+    c.setFillColor(navy)
+    c.setFont('Helvetica-Bold', 10)
+    c.drawCentredString(W/2, H - 0.72*cm, 'NEXUS ENTERPRISE')
+
+    # ── Main content area ─────────────────────────────────────────────────────
+    cx = W / 2  # horizontal centre
+
+    # Award icon circle
+    c.setFillColor(gold)
+    c.circle(cx, H - 2.8*cm, 0.55*cm, fill=1, stroke=0)
+    c.setFillColor(white)
+    c.setFont('Helvetica-Bold', 14)
+    c.drawCentredString(cx, H - 2.95*cm, '★')
+
+    # Certificate type label
+    c.setFillColor(mid_grey)
+    c.setFont('Helvetica', 9)
+    c.drawCentredString(cx, H - 3.7*cm, '— ' + cert.get_certificate_type_display().upper() + ' —')
+
+    # "CERTIFICATE" big title
+    c.setFillColor(navy)
+    c.setFont('Helvetica-Bold', 38)
+    c.drawCentredString(cx, H - 5.0*cm, 'CERTIFICATE')
+
+    # Gold divider line
+    c.setStrokeColor(gold)
+    c.setLineWidth(1.2)
+    c.line(cx - 5*cm, H - 5.5*cm, cx + 5*cm, H - 5.5*cm)
+
+    # "This is to certify that"
+    c.setFillColor(mid_grey)
+    c.setFont('Helvetica-Oblique', 11)
+    c.drawCentredString(cx, H - 6.3*cm, 'This is to proudly certify that')
+
+    # Recipient name
+    c.setFillColor(navy)
+    c.setFont('Helvetica-Bold', 30)
+    c.drawCentredString(cx, H - 7.5*cm, cert.recipient.full_name)
+
+    # Underline recipient name
+    name_w = c.stringWidth(cert.recipient.full_name, 'Helvetica-Bold', 30)
+    c.setStrokeColor(gold)
+    c.setLineWidth(1.0)
+    c.line(cx - name_w/2, H - 7.7*cm, cx + name_w/2, H - 7.7*cm)
+
+    # Description line
+    c.setFillColor(dark_text)
+    c.setFont('Helvetica', 11)
+    c.drawCentredString(cx, H - 8.5*cm, 'has successfully completed the required programme and is awarded this')
+    c.setFont('Helvetica-Bold', 11)
+    c.drawCentredString(cx, H - 9.0*cm, cert.get_certificate_type_display())
+
+    # ── Bottom info row: date | cert number | signature ───────────────────────
+    y_row = 2.8*cm
+    col1x = 3.8*cm
+    col3x = W - 3.8*cm
+
+    # Left: Issue date
+    c.setStrokeColor(gold)
+    c.setLineWidth(0.8)
+    c.line(col1x - 1.8*cm, y_row + 0.9*cm, col1x + 1.8*cm, y_row + 0.9*cm)
+    c.setFillColor(navy)
+    c.setFont('Helvetica-Bold', 10)
+    issue_str = cert.issue_date.strftime('%d %B %Y') if cert.issue_date else '—'
+    c.drawCentredString(col1x, y_row + 1.1*cm, issue_str)
+    c.setFillColor(mid_grey)
+    c.setFont('Helvetica', 8)
+    c.drawCentredString(col1x, y_row + 0.5*cm, 'DATE OF ISSUE')
+
+    # Centre: certificate number
+    c.setFillColor(navy)
+    c.setFont('Helvetica-Bold', 9)
+    c.drawCentredString(cx, y_row + 1.1*cm, cert.certificate_number)
+    c.setFillColor(mid_grey)
+    c.setFont('Helvetica', 8)
+    c.drawCentredString(cx, y_row + 0.5*cm, 'CERTIFICATE NUMBER')
+
+    # Right: Signature block
+    c.setStrokeColor(gold)
+    c.line(col3x - 2.2*cm, y_row + 0.9*cm, col3x + 2.2*cm, y_row + 0.9*cm)
+    c.setFillColor(navy)
+    c.setFont('Helvetica-Bold', 10)
+    c.drawCentredString(col3x, y_row + 1.1*cm, cert.signed_by_name or '—')
+    c.setFillColor(mid_grey)
+    c.setFont('Helvetica', 8)
+    c.drawCentredString(col3x, y_row + 0.5*cm, (cert.signed_by_title or 'AUTHORISED SIGNATORY').upper())
+
+    # ── QR Code (bottom-right corner, inside border) ──────────────────────────
+    qr_size = 2.4*cm
+    qr_x    = W - inner - qr_size - 0.4*cm
+    qr_y    = 1.5*cm
+
+    # White background for QR
+    c.setFillColor(white)
+    c.roundRect(qr_x - 0.15*cm, qr_y - 0.15*cm, qr_size + 0.3*cm, qr_size + 0.55*cm, 3, fill=1, stroke=0)
+    from reportlab.lib.utils import ImageReader
+    c.drawImage(ImageReader(qr_buffer), qr_x, qr_y, width=qr_size, height=qr_size, preserveAspectRatio=True)
+    c.setFillColor(mid_grey)
+    c.setFont('Helvetica', 6)
+    c.drawCentredString(qr_x + qr_size/2, qr_y - 0.1*cm, 'SCAN TO VERIFY')
+
+    c.save()
+    return buffer.getvalue()
+>>>>>>> origin/main
 
 
 class VerifyCertificateView(APIView):

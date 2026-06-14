@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Nexus — Radio Schedule Page  (upgraded)
 // • Create Slot modal mirrors Moodle-style "New event" form:
 //     – Event title, Date, Description (rich-text via contenteditable),
@@ -25,10 +26,22 @@ import {
 import {
 	Radio,
 	Plus,
+=======
+// Swahilipot — Radio Schedule Page
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format, parseISO, startOfWeek, addDays } from "date-fns";
+import {
+	Radio,
+	Plus,
+	Calendar,
+	Clock,
+>>>>>>> origin/main
 	ChevronLeft,
 	ChevronRight,
 	Mic2,
 	AlertCircle,
+<<<<<<< HEAD
 	X,
 	Edit2,
 	Trash2,
@@ -89,6 +102,16 @@ async function sendSlotNotification(
 
 // ─── colour map ──────────────────────────────────────────────────────────────
 const TYPE_COLORS: Record<string, string> = {
+=======
+} from "lucide-react";
+import { radioApi } from "../../services/api";
+import { useAuthStore } from "../../services/api";
+import { useForm } from "react-hook-form";
+import toast from "react-hot-toast";
+import clsx from "clsx";
+
+const SHOW_TYPE_COLORS: Record<string, string> = {
+>>>>>>> origin/main
 	news: "bg-red-500/20 text-red-300 border-red-500/30",
 	music: "bg-blue-500/20 text-blue-300 border-blue-500/30",
 	talk: "bg-purple-500/20 text-purple-300 border-purple-500/30",
@@ -98,6 +121,7 @@ const TYPE_COLORS: Record<string, string> = {
 	other: "bg-slate-500/20 text-slate-300 border-slate-500/30",
 };
 
+<<<<<<< HEAD
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function toLocalDatetimeValue(date: Date) {
 	return format(date, "yyyy-MM-dd'T'HH:mm");
@@ -252,12 +276,18 @@ export default function RadioPage() {
 		return () => clearInterval(interval);
 	}, []);
 
+=======
+export default function RadioPage() {
+	const { user } = useAuthStore();
+	const qc = useQueryClient();
+>>>>>>> origin/main
 	const isAdmin = [
 		"broadcast_admin",
 		"broadcast_staff",
 		"system_admin",
 	].includes(user?.role || "");
 	const isPresenter = user?.role === "presenter";
+<<<<<<< HEAD
 
 	const [weekStart, setWeekStart] = useState(() =>
 		startOfWeek(new Date(), { weekStartsOn: 1 }),
@@ -273,6 +303,16 @@ export default function RadioPage() {
 
 	const weekEnd = addDays(weekStart, 6);
 
+=======
+	const [weekStart, setWeekStart] = useState(() =>
+		startOfWeek(new Date(), { weekStartsOn: 1 }),
+	);
+	const [showCreateModal, setShowCreateModal] = useState(false);
+	const [showPlanModal, setShowPlanModal] = useState<any>(null);
+	const [selectedSlot, setSelectedSlot] = useState<any>(null);
+
+	const weekEnd = addDays(weekStart, 6);
+>>>>>>> origin/main
 	const { data: slots = [], isLoading } = useQuery({
 		queryKey: ["radio-schedule", weekStart],
 		queryFn: () =>
@@ -282,7 +322,11 @@ export default function RadioPage() {
 					end: format(weekEnd, "yyyy-MM-dd"),
 				})
 				.then((r) => r.data.results || r.data),
+<<<<<<< HEAD
 		refetchInterval: 60_000,
+=======
+		refetchInterval: 60000,
+>>>>>>> origin/main
 	});
 
 	const { data: mySlots = [] } = useQuery({
@@ -302,6 +346,7 @@ export default function RadioPage() {
 	});
 
 	const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+<<<<<<< HEAD
 	const HOURS = Array.from({ length: 19 }, (_, i) => i + 5); // 05–23
 
 	const getSlotsForDayHour = (day: Date, hour: number) =>
@@ -333,6 +378,19 @@ export default function RadioPage() {
 	return (
 		<div className="space-y-6 animate-fade-in">
 			{/* ── Header ─────────────────────────────────────────────────────── */}
+=======
+	const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+	const getSlotsForDay = (day: Date) =>
+		slots.filter(
+			(s: any) =>
+				format(parseISO(s.start_datetime), "yyyy-MM-dd") ===
+				format(day, "yyyy-MM-dd"),
+		);
+
+	return (
+		<div className="space-y-6 animate-fade-in">
+>>>>>>> origin/main
 			<div className="page-header">
 				<div>
 					<h1 className="page-title flex items-center gap-2">
@@ -345,7 +403,11 @@ export default function RadioPage() {
 				</div>
 				{isAdmin && (
 					<button
+<<<<<<< HEAD
 						onClick={() => setCreateModal({ open: true })}
+=======
+						onClick={() => setShowCreateModal(true)}
+>>>>>>> origin/main
 						className="btn-primary">
 						<Plus size={15} />
 						Create Slot
@@ -353,18 +415,30 @@ export default function RadioPage() {
 				)}
 			</div>
 
+<<<<<<< HEAD
 			{/* ── Presenter upcoming slots ────────────────────────────────────── */}
 			{isPresenter && (mySlots as any[]).length > 0 && (
+=======
+			{/* My upcoming slots (presenter view) */}
+			{isPresenter && mySlots.length > 0 && (
+>>>>>>> origin/main
 				<div className="card border-Swahilipot-500/20">
 					<h3 className="font-semibold text-white mb-3 flex items-center gap-2">
 						<Mic2 size={15} className="text-Swahilipot-400" /> My Upcoming Slots
 					</h3>
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+<<<<<<< HEAD
 						{(mySlots as any[]).slice(0, 3).map((slot: any) => (
 							<div
 								key={slot.id}
 								onClick={() => setDetailModal({ slot })}
 								className="p-3 bg-surface rounded-xl border border-surface-border cursor-pointer hover:border-Swahilipot-500/40 transition-colors">
+=======
+						{mySlots.slice(0, 3).map((slot: any) => (
+							<div
+								key={slot.id}
+								className="p-3 bg-surface rounded-xl border border-surface-border">
+>>>>>>> origin/main
 								<div className="font-medium text-white text-sm">
 									{slot.show_name}
 								</div>
@@ -378,13 +452,19 @@ export default function RadioPage() {
 								<div className="flex items-center justify-between mt-2">
 									{!slot.show_plan ? (
 										<span className="badge-amber text-[10px] flex items-center gap-1">
+<<<<<<< HEAD
 											<AlertCircle size={9} /> Plan needed
+=======
+											<AlertCircle size={9} />
+											Plan needed
+>>>>>>> origin/main
 										</span>
 									) : (
 										<span className="badge-green text-[10px]">
 											Plan submitted
 										</span>
 									)}
+<<<<<<< HEAD
 									<div className="flex items-center gap-1.5">
 										<a
 											href={buildGCalUrl(slot)}
@@ -406,6 +486,15 @@ export default function RadioPage() {
 											</button>
 										)}
 									</div>
+=======
+									{!slot.show_plan && (
+										<button
+											onClick={() => setShowPlanModal(slot)}
+											className="btn-primary btn-sm text-xs">
+											Submit Plan
+										</button>
+									)}
+>>>>>>> origin/main
 								</div>
 							</div>
 						))}
@@ -413,7 +502,11 @@ export default function RadioPage() {
 				</div>
 			)}
 
+<<<<<<< HEAD
 			{/* ── Week navigation ─────────────────────────────────────────────── */}
+=======
+			{/* Week navigation */}
+>>>>>>> origin/main
 			<div className="flex items-center justify-between">
 				<button
 					onClick={() => setWeekStart((d) => addDays(d, -7))}
@@ -430,11 +523,16 @@ export default function RadioPage() {
 				</button>
 			</div>
 
+<<<<<<< HEAD
 			{/* ── Weekly grid ─────────────────────────────────────────────────── */}
+=======
+			{/* Weekly grid */}
+>>>>>>> origin/main
 			<div className="card overflow-x-auto">
 				<div
 					className="grid min-w-[700px]"
 					style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}>
+<<<<<<< HEAD
 					{/* Header row */}
 					<div className="py-2" />
 					{days.map((day) => {
@@ -463,11 +561,46 @@ export default function RadioPage() {
 
 					{/* Hour rows */}
 					{HOURS.map((hour) => (
+=======
+					{/* Header */}
+					<div className="py-2" />
+					{days.map((day) => (
+						<div
+							key={day.toISOString()}
+							className={clsx(
+								"py-2 px-2 text-center border-l border-surface-border",
+								{
+									"bg-Swahilipot-600/10":
+										format(day, "yyyy-MM-dd") ===
+										format(new Date(), "yyyy-MM-dd"),
+								},
+							)}>
+							<div className="text-xs text-slate-400 uppercase tracking-wide">
+								{format(day, "EEE")}
+							</div>
+							<div
+								className={clsx("text-sm font-bold mt-0.5", {
+									"text-Swahilipot-400":
+										format(day, "yyyy-MM-dd") ===
+										format(new Date(), "yyyy-MM-dd"),
+									"text-white":
+										format(day, "yyyy-MM-dd") !==
+										format(new Date(), "yyyy-MM-dd"),
+								})}>
+								{format(day, "d")}
+							</div>
+						</div>
+					))}
+
+					{/* Time slots — show only hours with content + a few buffer hours */}
+					{HOURS.filter((h) => h >= 5 && h <= 23).map((hour) => (
+>>>>>>> origin/main
 						<div key={hour} className="contents">
 							<div className="py-3 pr-2 text-right text-[10px] text-slate-600 border-t border-surface-border/30">
 								{hour.toString().padStart(2, "0")}:00
 							</div>
 							{days.map((day) => {
+<<<<<<< HEAD
 								const cellSlots = getSlotsForDayHour(day, hour);
 								const hasSlots = cellSlots.length > 0;
 								return (
@@ -491,6 +624,24 @@ export default function RadioPage() {
 												className={clsx(
 													"w-full text-left p-1.5 rounded text-[10px] border font-medium leading-tight mb-0.5 hover:opacity-80 transition-opacity",
 													TYPE_COLORS[slot.show_type] || TYPE_COLORS.other,
+=======
+								const daySlots = getSlotsForDay(day).filter((s: any) => {
+									const h = parseISO(s.start_datetime).getHours();
+									return h === hour;
+								});
+								return (
+									<div
+										key={day.toISOString() + hour}
+										className="border-t border-l border-surface-border/30 min-h-[40px] p-0.5">
+										{daySlots.map((slot: any) => (
+											<button
+												key={slot.id}
+												onClick={() => setSelectedSlot(slot)}
+												className={clsx(
+													"w-full text-left p-1.5 rounded text-[10px] border font-medium leading-tight mb-0.5 hover:opacity-80 transition-opacity",
+													SHOW_TYPE_COLORS[slot.show_type] ||
+														SHOW_TYPE_COLORS.other,
+>>>>>>> origin/main
 												)}>
 												<div className="truncate font-semibold">
 													{slot.show_name}
@@ -517,6 +668,7 @@ export default function RadioPage() {
 				</div>
 			</div>
 
+<<<<<<< HEAD
 			{/* ── Slot detail modal ───────────────────────────────────────────── */}
 			{detailModal && (
 				<SlotDetailModal
@@ -542,6 +694,104 @@ export default function RadioPage() {
 			)}
 
 			{/* ── Submit show plan modal ──────────────────────────────────────── */}
+=======
+			{/* Slot detail modal */}
+			{selectedSlot && (
+				<div className="modal-backdrop" onClick={() => setSelectedSlot(null)}>
+					<div className="modal-box" onClick={(e) => e.stopPropagation()}>
+						<div className="modal-header">
+							<div>
+								<h3 className="font-semibold text-white">
+									{selectedSlot.show_name}
+								</h3>
+								<p className="text-xs text-slate-400 mt-0.5">
+									{selectedSlot.frequency_name}
+								</p>
+							</div>
+							<span
+								className={clsx(
+									"badge capitalize",
+									SHOW_TYPE_COLORS[selectedSlot.show_type] || "",
+								)}>
+								{selectedSlot.show_type}
+							</span>
+						</div>
+						<div className="modal-body space-y-3">
+							<div className="grid grid-cols-2 gap-3 text-sm">
+								<div className="bg-surface rounded-lg p-3">
+									<div className="text-slate-500 text-xs mb-1">Start</div>
+									<div className="text-white">
+										{format(
+											parseISO(selectedSlot.start_datetime),
+											"dd MMM yyyy, HH:mm",
+										)}
+									</div>
+								</div>
+								<div className="bg-surface rounded-lg p-3">
+									<div className="text-slate-500 text-xs mb-1">End</div>
+									<div className="text-white">
+										{format(parseISO(selectedSlot.end_datetime), "HH:mm")}
+									</div>
+								</div>
+								<div className="bg-surface rounded-lg p-3">
+									<div className="text-slate-500 text-xs mb-1">Presenter</div>
+									<div className="text-white">
+										{selectedSlot.presenter_name}
+									</div>
+								</div>
+								<div className="bg-surface rounded-lg p-3">
+									<div className="text-slate-500 text-xs mb-1">Status</div>
+									<div
+										className={clsx("capitalize", {
+											"text-green-400": selectedSlot.status === "live",
+											"text-amber-400": selectedSlot.status === "scheduled",
+											"text-slate-400": true,
+										})}>
+										{selectedSlot.status}
+									</div>
+								</div>
+							</div>
+							{selectedSlot.show_plan ? (
+								<div className="bg-surface rounded-xl p-4">
+									<div className="text-xs text-slate-400 uppercase tracking-wide mb-2">
+										Show Plan
+									</div>
+									<p className="text-sm text-slate-200 leading-relaxed">
+										{selectedSlot.show_plan}
+									</p>
+								</div>
+							) : (
+								<div className="alert alert-warning">
+									<AlertCircle size={14} />
+									<span>No show plan submitted yet.</span>
+								</div>
+							)}
+						</div>
+						<div className="modal-footer">
+							<button
+								onClick={() => setSelectedSlot(null)}
+								className="btn-secondary">
+								Close
+							</button>
+							{isPresenter &&
+								selectedSlot.presenter === user?.id &&
+								!selectedSlot.show_plan && (
+									<button
+										onClick={() => {
+											setShowPlanModal(selectedSlot);
+											setSelectedSlot(null);
+										}}
+										className="btn-primary">
+										Submit Show Plan
+									</button>
+								)}
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Submit show plan */}
+>>>>>>> origin/main
 			{showPlanModal && (
 				<div className="modal-backdrop" onClick={() => setShowPlanModal(null)}>
 					<div className="modal-box" onClick={(e) => e.stopPropagation()}>
@@ -565,6 +815,7 @@ export default function RadioPage() {
 				</div>
 			)}
 
+<<<<<<< HEAD
 			{/* ── Create slot modal ───────────────────────────────────────────── */}
 			{createModal.open && (
 				<CreateSlotModal
@@ -574,6 +825,14 @@ export default function RadioPage() {
 					onSuccess={() => {
 						qc.invalidateQueries({ queryKey: ["radio-schedule"] });
 						setCreateModal({ open: false });
+=======
+			{showCreateModal && (
+				<CreateSlotModal
+					onClose={() => setShowCreateModal(false)}
+					onSuccess={() => {
+						qc.invalidateQueries({ queryKey: ["radio-schedule"] });
+						setShowCreateModal(false);
+>>>>>>> origin/main
 					}}
 				/>
 			)}
@@ -581,6 +840,7 @@ export default function RadioPage() {
 	);
 }
 
+<<<<<<< HEAD
 // ─────────────────────────────────────────────────────────────────────────────
 // Slot Detail Modal — view / edit / cancel (delete)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1457,6 +1717,8 @@ function CreateSlotModal({
 // ─────────────────────────────────────────────────────────────────────────────
 // Show Plan Form
 // ─────────────────────────────────────────────────────────────────────────────
+=======
+>>>>>>> origin/main
 function ShowPlanForm({ slot, onSubmit, isPending, onClose }: any) {
 	const [plan, setPlan] = useState(slot.show_plan || "");
 	return (
@@ -1476,15 +1738,23 @@ function ShowPlanForm({ slot, onSubmit, isPending, onClose }: any) {
 				</div>
 				<div className="input-group">
 					<label className="input-label">
+<<<<<<< HEAD
 						Show Plan — Topics, Guests, Content Notes{" "}
 						<span className="text-red-400">*</span>
+=======
+						Show Plan — Topics, Guests, Content Notes *
+>>>>>>> origin/main
 					</label>
 					<textarea
 						value={plan}
 						onChange={(e) => setPlan(e.target.value)}
 						rows={6}
 						className="textarea"
+<<<<<<< HEAD
 						placeholder="Outline your topics, any guests, music selections, news segments, etc…"
+=======
+						placeholder="Outline your topics, any guests, music selections, news segments, etc..."
+>>>>>>> origin/main
 					/>
 				</div>
 			</div>
@@ -1496,9 +1766,123 @@ function ShowPlanForm({ slot, onSubmit, isPending, onClose }: any) {
 					disabled={!plan.trim() || isPending}
 					onClick={() => onSubmit(plan)}
 					className="btn-primary">
+<<<<<<< HEAD
 					{isPending ? "Submitting…" : "Submit Plan"}
+=======
+					{isPending ? "Submitting..." : "Submit Plan"}
+>>>>>>> origin/main
 				</button>
 			</div>
 		</>
 	);
 }
+<<<<<<< HEAD
+=======
+
+function CreateSlotModal({ onClose, onSuccess }: any) {
+	const { register, handleSubmit } = useForm();
+	const { data: frequencies = [] } = useQuery({
+		queryKey: ["radio-frequencies"],
+		queryFn: () => radioApi.frequencies().then((r) => r.data),
+	});
+	const { data: shows = [] } = useQuery({
+		queryKey: ["radio-shows"],
+		queryFn: () => radioApi.shows().then((r) => r.data),
+	});
+	const mutation = useMutation({
+		mutationFn: (data: any) => radioApi.createSlot(data),
+		onSuccess: () => {
+			toast.success("Slot created!");
+			onSuccess();
+		},
+		onError: (e: any) =>
+			toast.error(
+				e.response?.data?.detail ||
+					"Slot creation failed — check for conflicts",
+			),
+	});
+	return (
+		<div className="modal-backdrop" onClick={onClose}>
+			<div className="modal-box" onClick={(e) => e.stopPropagation()}>
+				<div className="modal-header">
+					<h3 className="font-semibold text-white">Create Radio Slot</h3>
+				</div>
+				<form onSubmit={handleSubmit((d) => mutation.mutate(d))}>
+					<div className="modal-body space-y-4">
+						<div className="alert alert-info">
+							<span>
+								The system will automatically check for scheduling conflicts.
+							</span>
+						</div>
+						<div className="grid grid-cols-2 gap-4">
+							<div className="input-group">
+								<label className="input-label">Frequency *</label>
+								<select
+									{...register("frequency", { required: true })}
+									className="select-input">
+									<option value="">Select...</option>
+									{frequencies.map((f: any) => (
+										<option key={f.id} value={f.id}>
+											{f.name} ({f.frequency_mhz} MHz)
+										</option>
+									))}
+								</select>
+							</div>
+							<div className="input-group">
+								<label className="input-label">Show *</label>
+								<select
+									{...register("show", { required: true })}
+									className="select-input">
+									<option value="">Select...</option>
+									{shows.map((s: any) => (
+										<option key={s.id} value={s.id}>
+											{s.name}
+										</option>
+									))}
+								</select>
+							</div>
+						</div>
+						<div className="grid grid-cols-2 gap-4">
+							<div className="input-group">
+								<label className="input-label">Start *</label>
+								<input
+									type="datetime-local"
+									{...register("start_datetime", { required: true })}
+									className="input"
+								/>
+							</div>
+							<div className="input-group">
+								<label className="input-label">End *</label>
+								<input
+									type="datetime-local"
+									{...register("end_datetime", { required: true })}
+									className="input"
+								/>
+							</div>
+						</div>
+						<div className="input-group">
+							<label className="input-label">Presenter User ID *</label>
+							<input
+								{...register("presenter", { required: true })}
+								className="input"
+								placeholder="User ID"
+							/>
+						</div>
+					</div>
+					<div className="modal-footer">
+						<button type="button" onClick={onClose} className="btn-secondary">
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={mutation.isPending}
+							className="btn-primary">
+							{mutation.isPending ? "Creating..." : "Create Slot"}
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	);
+}
+>>>>>>> origin/main

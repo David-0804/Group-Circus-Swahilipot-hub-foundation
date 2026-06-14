@@ -53,7 +53,11 @@ class EquipmentItem(TimeStampedModel):
     is_active = models.BooleanField(default=True)
     qr_code = models.CharField(max_length=100, unique=True, blank=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         ordering = ['category', 'name']
         indexes = [models.Index(fields=['status', 'organisation']), models.Index(fields=['asset_tag'])]
 
@@ -91,7 +95,11 @@ class CheckoutRequest(TimeStampedModel):
     return_notes = models.TextField(blank=True)
     overdue_alert_sent = models.BooleanField(default=False)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         ordering = ['-created_at']
 
     def is_overdue(self):
@@ -116,7 +124,11 @@ class MaintenanceLog(TimeStampedModel):
     photo_before = models.ImageField(upload_to='equipment/maintenance/', null=True, blank=True)
     photo_after = models.ImageField(upload_to='equipment/maintenance/', null=True, blank=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         ordering = ['-created_at']
 
 
@@ -124,7 +136,11 @@ class MaintenanceLog(TimeStampedModel):
 
 class EquipmentCategorySerializer(serializers.ModelSerializer):
     item_count = serializers.SerializerMethodField()
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = EquipmentCategory
         fields = '__all__'
     def get_item_count(self, obj):
@@ -137,7 +153,11 @@ class EquipmentItemSerializer(serializers.ModelSerializer):
     due_return_date = serializers.SerializerMethodField()
     active_maintenance = serializers.SerializerMethodField()
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = EquipmentItem
         fields = '__all__'
         read_only_fields = ['organisation', 'qr_code']
@@ -166,7 +186,11 @@ class CheckoutRequestSerializer(serializers.ModelSerializer):
     approved_by_name = serializers.CharField(source='approved_by.full_name', read_only=True)
     is_overdue = serializers.SerializerMethodField()
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = CheckoutRequest
         fields = '__all__'
         read_only_fields = ['requested_by', 'status', 'approved_by', 'actual_return_date']
@@ -179,7 +203,11 @@ class MaintenanceLogSerializer(serializers.ModelSerializer):
     item_name = serializers.CharField(source='item.name', read_only=True)
     reported_by_name = serializers.CharField(source='reported_by.full_name', read_only=True)
 
+<<<<<<< HEAD
     class Meta:  # type: ignore
+=======
+    class Meta:
+>>>>>>> origin/main
         model = MaintenanceLog
         fields = '__all__'
         read_only_fields = ['reported_by']

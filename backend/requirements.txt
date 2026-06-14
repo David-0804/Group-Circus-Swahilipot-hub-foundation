@@ -70,6 +70,7 @@ django-debug-toolbar
 python-decouple
 gunicorn
 python-dotenv
+<<<<<<< HEAD
 
 # Data 
 pandas
@@ -82,3 +83,5 @@ xlsxwriter
 python-pptx
 
 openrouter
+=======
+>>>>>>> origin/main

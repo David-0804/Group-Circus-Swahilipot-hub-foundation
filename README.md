@@ -27,7 +27,11 @@
 | Leave Management                        | ✅ Implemented |
 | Calendar + Google Calendar Sync         | ✅ Specified   |
 
+<<<<<<< HEAD
 ### Swahilipot Institution Module
+=======
+### Broadcast Media Institution Module
+>>>>>>> origin/main
 
 | Feature                                          | Status         |
 | ------------------------------------------------ | -------------- |

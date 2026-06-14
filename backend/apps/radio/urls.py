@@ -1,5 +1,6 @@
 """Nexus Radio — URL Configuration"""
 from django.urls import path
+<<<<<<< HEAD
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
@@ -12,6 +13,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+=======
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+>>>>>>> origin/main
 
 
 class RadioView(APIView):
@@ -30,6 +36,7 @@ class RadioView(APIView):
         return Response(status=204)
 
 
+<<<<<<< HEAD
 # ---------------------------------------------------------------------------
 # Helper: build a Google Calendar "Add to Calendar" URL from slot data.
 # ---------------------------------------------------------------------------
@@ -303,3 +310,14 @@ urlpatterns = [
 # For dev/testing, swap to the console backend:
 #   EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # =============================================================================
+=======
+urlpatterns = [
+    path('',                      RadioView.as_view(), name='radio-list'),
+    path('schedule/',             RadioView.as_view(), name='radio-schedule'),
+    path('schedule/<uuid:pk>/',   RadioView.as_view(), name='radio-slot-detail'),
+    path('frequencies/',          RadioView.as_view(), name='radio-frequencies'),
+    path('shows/',                RadioView.as_view(), name='radio-shows'),
+    path('my-schedule/',          RadioView.as_view(), name='radio-my-schedule'),
+    path('<uuid:pk>/',            RadioView.as_view(), name='radio-detail'),
+]
+>>>>>>> origin/main

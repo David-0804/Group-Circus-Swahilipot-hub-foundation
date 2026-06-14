@@ -1,6 +1,10 @@
 """Nexus Accounts — URL Configuration"""
 from django.urls import path
+<<<<<<< HEAD
 from .views import UserProfileView, UserListView, UserDetailView, UserPreferencesView
+=======
+from .views import UserProfileView, UserListView, UserDetailView
+>>>>>>> origin/main
 from apps.accounts.org_views import (
     OrganisationView, BranchListView, BranchDetailView,
     DepartmentListView, DepartmentDetailView,
@@ -14,9 +18,12 @@ urlpatterns = [
     path('profile/',            UserProfileView.as_view(),       name='user-profile'),
     path('profile/password/',   ChangePasswordView.as_view(),    name='change-password'),
 
+<<<<<<< HEAD
     # ── Accessibility & notification preferences (synced across devices) ──
     path('preferences/',        UserPreferencesView.as_view(),   name='user-preferences'),
 
+=======
+>>>>>>> origin/main
     # MFA
     path('mfa/setup/',          MFASetupView.as_view(),          name='mfa-setup'),
     path('mfa/disable/',        MFADisableView.as_view(),        name='mfa-disable'),
@@ -44,4 +51,8 @@ urlpatterns = [
 
     # Audit log
     path('audit-log/',          AuditLogView.as_view(),          name='audit-log'),
+<<<<<<< HEAD
 ]
+=======
+]
+>>>>>>> origin/main

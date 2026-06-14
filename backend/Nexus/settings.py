@@ -1,5 +1,10 @@
 """
+<<<<<<< HEAD
 Swahilipot Foundation Management System — Settings
+=======
+Nexus Enterprise Management System — Settings
+Covers: Industrial Attachment + Broadcast Media Institution
+>>>>>>> origin/main
 """
 import os
 from pathlib import Path
@@ -8,6 +13,7 @@ from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+<<<<<<< HEAD
 # ── Core ──────────────────────────────────────────────────────────────────────
 SECRET_KEY = os.environ.get('SECRET_KEY')  # Required — no fallback
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
@@ -16,6 +22,13 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS')
 # ── Apps ──────────────────────────────────────────────────────────────────────
 DJANGO_APPS = [
     'daphne',
+=======
+SECRET_KEY = os.environ.get('SECRET_KEY', 'Nexus-enterprise-secret-key-change-in-production-2026')
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',')
+
+DJANGO_APPS = [
+>>>>>>> origin/main
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -73,13 +86,20 @@ LOCAL_APPS = [
     'apps.news',
     'apps.videography',
     'apps.broadcast',
+<<<<<<< HEAD
     'core',
     'apps.chat',
+=======
+    'core'
+>>>>>>> origin/main
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
+<<<<<<< HEAD
 # ── Middleware ────────────────────────────────────────────────────────────────
+=======
+>>>>>>> origin/main
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -115,6 +135,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Nexus.wsgi.application'
 ASGI_APPLICATION = 'Nexus.asgi.application'
 
+<<<<<<< HEAD
 # ── Database ──────────────────────────────────────────────────────────────────
 DATABASES = {
     'default': {
@@ -124,6 +145,17 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD'),
         'HOST': os.environ.get('DB_HOST'),
         'PORT': os.environ.get('DB_PORT', '5432'),
+=======
+# Database
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT', cast=int),
+>>>>>>> origin/main
         'OPTIONS': {
             'options': '-c search_path=public',
         },
@@ -131,6 +163,7 @@ DATABASES = {
     }
 }
 
+<<<<<<< HEAD
 # ── Redis / Cache ─────────────────────────────────────────────────────────────
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379')
 
@@ -138,6 +171,14 @@ CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': f"{REDIS_URL}/1",
+=======
+
+# Redis / Cache
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+>>>>>>> origin/main
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
@@ -148,16 +189,24 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
+<<<<<<< HEAD
             'hosts': [f"{REDIS_URL}/2"],
+=======
+            'hosts': [os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/2')],
+>>>>>>> origin/main
         },
     },
 }
 
+<<<<<<< HEAD
 # ── Celery ────────────────────────────────────────────────────────────────────
 CELERY_BROKER_URL = f"{REDIS_URL}/1"
 CELERY_RESULT_BACKEND = f"{REDIS_URL}/1"
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
+=======
+# Auth
+>>>>>>> origin/main
 AUTH_USER_MODEL = 'accounts.User'
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -167,7 +216,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+<<<<<<< HEAD
 # ── JWT ───────────────────────────────────────────────────────────────────────
+=======
+# JWT
+>>>>>>> origin/main
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -181,7 +234,11 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
+<<<<<<< HEAD
 # ── DRF ───────────────────────────────────────────────────────────────────────
+=======
+# DRF
+>>>>>>> origin/main
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -212,6 +269,7 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
 }
 
+<<<<<<< HEAD
 # ── CORS ──────────────────────────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
@@ -221,6 +279,17 @@ CORS_ALLOW_CREDENTIALS = True
 # ⚠️ CORS_ALLOW_ALL_ORIGINS removed — was allowing every website to call your API
 
 # ── Static / Media ────────────────────────────────────────────────────────────
+=======
+# CORS
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # for development only
+
+# Static / Media
+>>>>>>> origin/main
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
@@ -228,18 +297,27 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+<<<<<<< HEAD
 # ── File Storage (S3 / MinIO / R2) ───────────────────────────────────────────
+=======
+# File Storage (S3-compatible / MinIO)
+>>>>>>> origin/main
 USE_S3 = os.environ.get('USE_S3', 'False') == 'True'
 if USE_S3:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+<<<<<<< HEAD
     AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'nexus-media')
+=======
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'Nexus-media')
+>>>>>>> origin/main
     AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL')
     AWS_S3_FILE_OVERWRITE = False
     AWS_DEFAULT_ACL = 'private'
     AWS_S3_CUSTOM_DOMAIN = os.environ.get('AWS_S3_CUSTOM_DOMAIN')
 
+<<<<<<< HEAD
 # ── Email ─────────────────────────────────────────────────────────────────────
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
@@ -251,11 +329,27 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', '')
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # ── SMS ───────────────────────────────────────────────────────────────────────
+=======
+# Email
+EMAIL_BACKEND = config('EMAIL_BACKEND')
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_PORT = config('EMAIL_PORT', cast=int)
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+print("WEWEWE", EMAIL_HOST_USER)
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# SMS (Africa's Talking / Twilio)
+>>>>>>> origin/main
 SMS_PROVIDER = os.environ.get('SMS_PROVIDER', 'africas_talking')
 SMS_API_KEY = os.environ.get('SMS_API_KEY', '')
 SMS_USERNAME = os.environ.get('SMS_USERNAME', 'sandbox')
 SMS_SHORTCODE = os.environ.get('SMS_SHORTCODE', 'Nexus')
 
+<<<<<<< HEAD
 # ── Push / FCM ────────────────────────────────────────────────────────────────
 FCM_SERVER_KEY = os.environ.get('FCM_SERVER_KEY', '')
 
@@ -276,6 +370,35 @@ USE_TZ = True  # Fixed — was False, causes datetime bugs
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ── Logging ───────────────────────────────────────────────────────────────────
+=======
+# Push Notifications (FCM)
+FCM_SERVER_KEY = os.environ.get('FCM_SERVER_KEY', '')
+
+# Geolocation
+WORKPLACE_GEOFENCE_RADIUS_METERS = int(os.environ.get('GEOFENCE_RADIUS', 100))
+
+# Alert recipients for system emergencies
+EMERGENCY_ALERT_EMAILS = os.environ.get('EMERGENCY_ALERT_EMAILS', 'admin@Nexus.system').split(',')
+print(EMERGENCY_ALERT_EMAILS, 123445)
+EMERGENCY_ALERT_PHONES = os.environ.get('EMERGENCY_ALERT_PHONES', '').split(',')
+
+# FM Station monitoring
+FM_HEARTBEAT_ENDPOINT = os.environ.get('FM_HEARTBEAT_ENDPOINT', '')
+FM_HEARTBEAT_INTERVAL_SECONDS = int(os.environ.get('FM_HEARTBEAT_INTERVAL', 300))
+
+# MFA
+MFA_REQUIRED_ROLES = ['hr_officer', 'system_admin', 'executive', 'finance', 'legal']
+
+# Internationalisation
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'Africa/Nairobi'
+USE_I18N = True
+USE_TZ = False
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Logging
+>>>>>>> origin/main
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -287,6 +410,7 @@ LOGGING = {
     },
     'handlers': {
         'console': {'class': 'logging.StreamHandler', 'formatter': 'verbose'},
+<<<<<<< HEAD
     },
     'root': {'handlers': ['console'], 'level': 'INFO'},
     'loggers': {
@@ -296,6 +420,26 @@ LOGGING = {
 }
 
 # ── Security (production only) ────────────────────────────────────────────────
+=======
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'Nexus.log',
+            'maxBytes': 1024 * 1024 * 50,
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+    },
+    'root': {'handlers': ['console'], 'level': 'INFO'},
+    'loggers': {
+        'django': {'handlers': ['console', 'file'], 'level': 'INFO', 'propagate': False},
+        'Nexus': {'handlers': ['console', 'file'], 'level': 'DEBUG', 'propagate': False},
+    },
+}
+
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+# Security headers for production
+>>>>>>> origin/main
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -304,4 +448,13 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+<<<<<<< HEAD
     X_FRAME_OPTIONS = 'DENY'
+=======
+    X_FRAME_OPTIONS = 'DENY'
+
+
+# settings.py
+CELERY_BROKER_URL = "redis://redis:6379/1"
+CELERY_RESULT_BACKEND = "redis://redis:6379/1"
+>>>>>>> origin/main

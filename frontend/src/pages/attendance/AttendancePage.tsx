@@ -73,7 +73,11 @@ export default function AttendancePage() {
 		mutationFn: (data: any) => attendanceApi.checkOut(data),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["attendance-today"] });
+<<<<<<< HEAD
 			toast.success("Checked out successfully!");
+=======
+			toast.success("👋 Checked out successfully!");
+>>>>>>> origin/main
 		},
 		onError: (e: any) =>
 			toast.error(e.response?.data?.detail || "Check-out failed"),

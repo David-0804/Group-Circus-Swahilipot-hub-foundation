@@ -50,6 +50,10 @@ def custom_exception_handler(exc, context):
 class AuditLogMiddleware:
     """Log all write operations to the immutable audit log"""
     LOGGED_METHODS = {'POST', 'PUT', 'PATCH', 'DELETE'}
+<<<<<<< HEAD
+=======
+    print(12345678)
+>>>>>>> origin/main
     def __init__(self, get_response):
         self.get_response = get_response
 
