@@ -287,7 +287,6 @@ const radioStore = {
         await a.play();
       }
     } catch (err) {
-      console.log("Playback error:", err);
       this.emit({ onAir: false });
     }
   },

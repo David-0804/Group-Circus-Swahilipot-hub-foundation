@@ -5,7 +5,7 @@ from .models import FeedbackTicket
 class FeedbackTicketSerializer(serializers.ModelSerializer):
     submitted_by_name = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta:  # type: ignore
         model = FeedbackTicket
         fields = [
             "id",

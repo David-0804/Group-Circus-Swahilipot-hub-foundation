@@ -3,8 +3,5 @@ from django.apps import AppConfig
 
 class ChatConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.chat"
-    verbose_name = "Chat"
-
-    def ready(self):
-        pass  # signal imports go here if needed
+    name = "apps.chat"          # matches LOCAL_APPS entry in settings.py
+    verbose_name = "Nexus Chat"

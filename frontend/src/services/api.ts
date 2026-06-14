@@ -17,7 +17,6 @@ export const api: AxiosInstance = axios.create({
 // Attach JWT to every request
 api.interceptors.request.use((config) => {
 	const token = useAuthStore.getState().accessToken;
-	console.log("TOKEN:", token);
 	if (token) config.headers.Authorization = `Bearer ${token}`;
 	return config;
 });
@@ -332,6 +331,24 @@ export const radioApi = {
 	shows: () => api.get("/radio/shows/"),
 	createShow: (data: any) => api.post("/radio/shows/", data),
 	mySchedule: () => api.get("/radio/my-schedule/"),
+
+	// ── Notifications & reminders ────────────────────────────────────────
+	/** POST /radio/notify/
+	 *  Sends an email alert (created / updated / cancelled) to the presenter
+	 *  identified by presenter_user_id.
+	 *  Returns { sent_to: string; gcal_url: string } */
+	notifySlot: (payload: {
+		slot: Record<string, any>;
+		presenter_user_id: string;
+		action: "created" | "updated" | "cancelled";
+	}) => api.post("/radio/notify/", payload),
+
+	/** GET /radio/upcoming-reminders/?window=<minutes>
+	 *  Returns the authenticated user's slots starting within `window` minutes.
+	 *  Shape: { results: Array<{ id, show_name, start_datetime, end_datetime,
+	 *            frequency_name, location, minutes_away, gcal_url }> } */
+	upcomingReminders: (window = 65) =>
+		api.get("/radio/upcoming-reminders/", { params: { window } }),
 };
 
 // ── FM Report ──────────────────────────────────────────────────────────────
@@ -447,30 +464,126 @@ export const callsApi = {
 
 // ── Finance ────────────────────────────────────────────────────────────────
 export const financeApi = {
+	// Existing
 	budgets: (params?: any) => api.get("/finance/budgets/", { params }),
 	createBudget: (data: any) => api.post("/finance/budgets/", data),
 	expenses: (params?: any) => api.get("/finance/expenses/", { params }),
 	submitExpense: (data: any) => api.post("/finance/expenses/", data),
 	approveExpense: (id: string, data: any) =>
-		api.post("/finance/expenses/" + id + "/approve/", data),
+		api.post(`/finance/expenses/${id}/action/`, data),
 	invoices: (params?: any) => api.get("/finance/invoices/", { params }),
 	stipends: (params?: any) => api.get("/finance/stipends/", { params }),
 	cashFlow: (params?: any) => api.get("/finance/cash-flow/", { params }),
 	reports: (params?: any) => api.get("/finance/reports/", { params }),
+
+	// Invoices
+	createInvoice: (data: any) => api.post("/finance/invoices/", data),
+	approveInvoice: (id: string, data: any) =>
+		api.post(`/finance/invoices/${id}/action/`, data),
+
+	// Payroll
+	payroll: (params?: any) => api.get("/finance/payroll/", { params }),
+	processPayroll: (data: any) => api.post("/finance/payroll/process/", data),
+	downloadPayslip: (id: string) =>
+		api.get(`/finance/payroll/${id}/payslip/`, { responseType: "blob" }),
+
+	// Petty Cash
+	pettyCash: (params?: any) => api.get("/finance/petty-cash/", { params }),
+	createPettyCash: (data: any) => api.post("/finance/petty-cash/", data),
+	approvePettyCash: (id: string, data: any) =>
+		api.post(`/finance/petty-cash/${id}/action/`, data),
+
+	// Purchase Orders
+	purchaseOrders: (params?: any) =>
+		api.get("/finance/purchase-orders/", { params }),
+	createPurchaseOrder: (data: any) =>
+		api.post("/finance/purchase-orders/", data),
+	approvePurchaseOrder: (id: string, data: any) =>
+		api.post(`/finance/purchase-orders/${id}/action/`, data),
+
+	// Payments
+	payments: (params?: any) => api.get("/finance/payments/", { params }),
+	createPayment: (data: any) => api.post("/finance/payments/", data),
+	deletePayment: (id: string) => api.delete(`/finance/payments/${id}/`),
+
+	// Stipends (extended)
+	createStipend: (data: any) => api.post("/finance/stipends/", data),
+	processStipend: (id: string) => api.post(`/finance/stipends/${id}/process/`),
+
+	// Reports
+	generateReport: (data: any) => api.post("/finance/reports/generate/", data),
+
+	// Expense category breakdown (pie chart)
+	expenseCategories: () => api.get("/finance/expense-categories/"),
 };
 
 // ── Analytics ──────────────────────────────────────────────────────────────
+// ── Analytics ──────────────────────────────────────────────────────────────
 export const analyticsApi = {
-	dashboard: () => api.get("/analytics/dashboard/"),
+	// ── Existing endpoints (unchanged) ──────────────────────────────────────
+	dashboard:  () => api.get("/analytics/dashboard/"),
 	attendance: (params?: any) => api.get("/analytics/attendance/", { params }),
-	tasks: (params?: any) => api.get("/analytics/tasks/", { params }),
+	tasks:      (params?: any) => api.get("/analytics/tasks/",      { params }),
 	internship: (params?: any) => api.get("/analytics/internship/", { params }),
-	broadcast: (params?: any) => api.get("/analytics/broadcast/", { params }),
+	broadcast:  (params?: any) => api.get("/analytics/broadcast/",  { params }),
+	system:     (params?: any) => api.get("/analytics/system/",     { params }),
+	fm:         (params?: any) => api.get("/analytics/fm/",         { params }),
+	department: (deptId: string, params?: any) =>
+		api.get(`/analytics/department/${deptId}/`, { params }),
+
+	// ── Legacy CSV export (kept for backwards compat) ────────────────────────
 	exportReport: (module: string, params?: any) =>
 		api.get("/analytics/export/" + module + "/", {
 			params,
 			responseType: "blob",
 		}),
+
+	// ── New export engine: PDF · Excel · PPTX · CSV · JSON ──────────────────
+	// GET /analytics/exports/<fmt>/<module>/?days=30
+	// fmt:    pdf | excel | pptx | csv | json
+	// module: full | audit | users | modules | performance | attendance |
+	//         equipment | alerts | certificates | feedback | wifi | videography
+	export: async (
+		fmt: "pdf" | "excel" | "pptx" | "csv" | "json",
+		module = "full",
+		options: { days?: number; department?: string; start?: string; end?: string } = {}
+	): Promise<void> => {
+		const { days = 30, department, start, end } = options;
+		const params: Record<string, string> = { days: String(days) };
+		if (department) params.department = department;
+		if (start)      params.start      = start;
+		if (end)        params.end        = end;
+
+		const mimes: Record<string, string> = {
+			pdf:   "application/pdf",
+			excel: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			pptx:  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+			csv:   "text/csv",
+			json:  "application/json",
+		};
+		const exts: Record<string, string> = {
+			pdf: ".pdf", excel: ".xlsx", pptx: ".pptx", csv: ".csv", json: ".json",
+		};
+
+		const res = await api.get(`/analytics/exports/${fmt}/${module}/`, {
+			params,
+			responseType: "blob",
+		});
+
+		// Pull filename from Content-Disposition header, or build a fallback
+		const cd  = res.headers["content-disposition"] as string | undefined;
+		const match = cd?.match(/filename="([^"]+)"/);
+		const filename = match?.[1] ??
+			`BMI-${module}-${new Date().toISOString().slice(0, 10)}${exts[fmt] ?? ""}`;
+
+		const blob   = new Blob([res.data], { type: mimes[fmt] });
+		const objUrl = URL.createObjectURL(blob);
+		const a      = Object.assign(document.createElement("a"), {
+			href: objUrl, download: filename,
+		});
+		a.click();
+		URL.revokeObjectURL(objUrl);
+	},
 };
 
 // ── Admin Dashboard ────────────────────────────────────────────────────────
@@ -646,4 +759,21 @@ export const rdApi = {
 	ideas: (params?: any) => api.get("/rd/ideas/", { params }),
 	submitIdea: (data: any) => api.post("/rd/ideas/", data),
 	patents: (params?: any) => api.get("/rd/patents/", { params }),
+};
+
+export const deptApi = {
+	overview: () => api.get("/attendance/dept/overview/"),
+	today: () => api.get("/attendance/dept/today/"),
+	members: (days = 30) => api.get(`/attendance/dept/members/?days=${days}`),
+	absentees: (min = 1, days = 30) =>
+		api.get(`/attendance/dept/absentees/?min=${min}&days=${days}`),
+	lateComers: (min = 1, days = 30) =>
+		api.get(`/attendance/dept/late-comers/?min=${min}&days=${days}`),
+	trends: (days = 30) => api.get(`/attendance/dept/trends/?days=${days}`),
+	warn: (userId: string, data: any) =>
+		api.post(`/attendance/dept/warn/${userId}/`, data),
+	deactivate: (userId: string, data: any) =>
+		api.post(`/attendance/dept/deactivate/${userId}/`, data),
+	autoEnforce: (dryRun = false) =>
+		api.post("/attendance/dept/auto-enforce/", { dry_run: dryRun }),
 };

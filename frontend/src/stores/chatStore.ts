@@ -1,462 +1,712 @@
-// Nexus Chat Store — Zustand state management for the entire chat system
+// Nexus Chat Store — Zustand state wired to the real Django backend
+// Replaces the demo-data version. Drop this file in at the same path.
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { chatApi, ChatWebSocket } from "../services/chatApi";
 
 export type MessageStatus = "sending" | "sent" | "delivered" | "seen";
 export type MediaType = "image" | "video" | "audio" | "document";
-export type CallStatus = "ringing" | "connected" | "ended" | "missed" | "declined";
+export type CallStatus =
+	| "ringing"
+	| "connected"
+	| "ended"
+	| "missed"
+	| "declined";
 
 export interface MediaAttachment {
-  id: string;
-  type: MediaType;
-  url: string;
-  name: string;
-  size: number;
-  thumbnailUrl?: string;
-  mimeType: string;
+	id: string;
+	type: MediaType;
+	url: string;
+	name: string;
+	size: number;
+	thumbnailUrl?: string;
+	mimeType: string;
 }
 
 export interface CallRecord {
-  id: string;
-  type: "voice" | "video";
-  status: CallStatus;
-  initiatorId: string;
-  recipientId: string;
-  startedAt: string;
-  endedAt?: string;
-  duration?: number; // seconds
+	id: string;
+	type: "voice" | "video";
+	status: CallStatus;
+	initiatorId: string;
+	recipientId: string;
+	startedAt: string;
+	endedAt?: string;
+	duration?: number;
 }
 
 export interface Message {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  senderName: string;
-  senderAvatar?: string;
-  content: string;
-  timestamp: string;
-  status: MessageStatus;
-  media?: MediaAttachment[];
-  callRecord?: CallRecord;
-  replyTo?: string; // message id
-  isSystem?: boolean;
+	id: string;
+	conversationId: string;
+	senderId: string;
+	senderName: string;
+	senderAvatar?: string;
+	content: string;
+	timestamp: string;
+	status: MessageStatus;
+	media?: MediaAttachment[];
+	callRecord?: CallRecord;
+	replyTo?: string;
+	isSystem?: boolean;
 }
 
 export interface Participant {
-  id: string;
-  name: string;
-  role: string;
-  department?: string;
-  email: string;
-  avatar?: string;
-  isOnline: boolean;
-  lastSeen?: string;
+	id: string;
+	name: string;
+	role: string;
+	department?: string;
+	email: string;
+	avatar?: string;
+	isOnline: boolean;
+	lastSeen?: string;
 }
 
 export interface Conversation {
-  id: string;
-  type: "direct" | "group";
-  name?: string; // for groups
-  participants: Participant[];
-  lastMessage?: Message;
-  unreadCount: number;
-  createdAt: string;
-  createdBy?: string;
-  avatar?: string;
-  description?: string;
+	id: string;
+	type: "direct" | "group";
+	name?: string;
+	participants: Participant[];
+	lastMessage?: {
+		content: string;
+		timestamp: string;
+		senderName: string;
+	};
+	unreadCount: number;
+	createdAt: string;
+	createdBy?: string;
+	avatar?: string;
+	description?: string;
 }
 
 export interface AuditLog {
-  id: string;
-  action: "group_created" | "group_creation_denied";
-  performedBy: string;
-  performedByName: string;
-  timestamp: string;
-  groupName?: string;
-  reason?: string;
+	id: string;
+	action: "group_created" | "group_creation_denied";
+	performedBy: string;
+	performedByName: string;
+	timestamp: string;
+	groupName?: string;
+	reason?: string;
 }
 
 interface ChatState {
-  // Panel state
-  isChatOpen: boolean;
-  isExpanded: boolean;
-  activeConversationId: string | null;
-  activeTab: "groups" | "direct";
+	// Panel state
+	isChatOpen: boolean;
+	isExpanded: boolean;
+	activeConversationId: string | null;
+	activeTab: "groups" | "direct";
 
-  // Data
-  conversations: Conversation[];
-  messages: Record<string, Message[]>; // conversationId -> messages
-  onlineUsers: Record<string, boolean>; // userId -> isOnline
-  typingUsers: Record<string, Record<string, boolean>>; // conversationId -> userId -> isTyping
-  auditLogs: AuditLog[];
+	// Loading states
+	isLoadingConversations: boolean;
+	isLoadingMessages: Record<string, boolean>;
 
-  // Active call
-  activeCall: CallRecord | null;
-  callStatus: CallStatus | null;
+	// Data
+	conversations: Conversation[];
+	messages: Record<string, Message[]>;
+	onlineUsers: Record<string, boolean>;
+	typingUsers: Record<string, Record<string, boolean>>;
+	auditLogs: AuditLog[];
 
-  // Actions
-  toggleChat: () => void;
-  toggleExpanded: () => void;
-  setActiveConversation: (id: string | null) => void;
-  setActiveTab: (tab: "groups" | "direct") => void;
+	// Active call
+	activeCall: CallRecord | null;
+	callStatus: CallStatus | null;
 
-  addMessage: (message: Message) => void;
-  updateMessageStatus: (conversationId: string, messageId: string, status: MessageStatus) => void;
-  sendMessage: (conversationId: string, senderId: string, senderName: string, content: string, media?: MediaAttachment[]) => Message;
+	// WebSocket
+	_ws: ChatWebSocket | null;
 
-  getOrCreateConversation: (currentUser: Participant, otherUser: Participant) => string;
-  createGroup: (name: string, description: string, creatorId: string, creatorName: string, creatorRole: string, participants: Participant[]) => { success: boolean; error?: string; groupId?: string };
+	// Actions — UI
+	toggleChat: () => void;
+	toggleExpanded: () => void;
+	setActiveConversation: (id: string | null) => void;
+	setActiveTab: (tab: "groups" | "direct") => void;
 
-  setTyping: (conversationId: string, userId: string, isTyping: boolean) => void;
-  setUserOnline: (userId: string, isOnline: boolean) => void;
+	// Actions — API
+	loadConversations: () => Promise<void>;
+	loadMessages: (conversationId: string) => Promise<void>;
+	sendMessage: (
+		conversationId: string,
+		senderId: string,
+		senderName: string,
+		content: string,
+		media?: MediaAttachment[],
+	) => Promise<Message>;
+	getOrCreateConversation: (
+		currentUser: Participant,
+		otherUser: Participant,
+	) => Promise<string>;
+	createGroup: (
+		name: string,
+		description: string,
+		creatorId: string,
+		creatorName: string,
+		creatorRole: string,
+		participants: Participant[],
+	) => Promise<{ success: boolean; error?: string; groupId?: string }>;
+	markConversationRead: (conversationId: string) => Promise<void>;
 
-  startCall: (type: "voice" | "video", initiatorId: string, recipientId: string, conversationId: string) => void;
-  endCall: (status: CallStatus) => void;
+	// Actions — local / WS
+	addMessage: (message: Message) => void;
+	updateMessageStatus: (
+		conversationId: string,
+		messageId: string,
+		status: MessageStatus,
+	) => void;
+	setTyping: (
+		conversationId: string,
+		userId: string,
+		isTyping: boolean,
+	) => void;
+	setUserOnline: (userId: string, isOnline: boolean) => void;
+	startCall: (
+		type: "voice" | "video",
+		initiatorId: string,
+		recipientId: string,
+		conversationId: string,
+	) => Promise<void>;
+	endCall: (status: CallStatus) => Promise<void>;
+	getTotalUnread: () => number;
 
-  markConversationRead: (conversationId: string) => void;
-  getTotalUnread: () => number;
+	// WebSocket lifecycle
+	connectWS: (token: string) => void;
+	disconnectWS: () => void;
 }
 
-// Seed data for demo
-const DEMO_USERS: Participant[] = [
-  { id: "u1", name: "Sarah Kamau", role: "Supervisor", department: "Broadcast", email: "sarah.kamau@nexus.co.ke", isOnline: true },
-  { id: "u2", name: "John Mwangi", role: "Journalist", department: "News", email: "john.mwangi@nexus.co.ke", isOnline: true },
-  { id: "u3", name: "Amina Ochieng", role: "HR Officer", department: "Human Resources", email: "amina.ochieng@nexus.co.ke", isOnline: false, lastSeen: "2 hours ago" },
-  { id: "u4", name: "David Otieno", role: "Station Engineer", department: "Broadcast", email: "david.otieno@nexus.co.ke", isOnline: true },
-  { id: "u5", name: "Grace Wanjiku", role: "Presenter", department: "Radio", email: "grace.wanjiku@nexus.co.ke", isOnline: false, lastSeen: "Yesterday" },
-  { id: "u6", name: "Peter Njoroge", role: "Videographer", department: "Production", email: "peter.njoroge@nexus.co.ke", isOnline: true },
-];
-
 const now = () => new Date().toISOString();
-const past = (mins: number) => new Date(Date.now() - mins * 60000).toISOString();
 
-const DEMO_CONVERSATIONS: Conversation[] = [
-  {
-    id: "conv-general",
-    type: "group",
-    name: "#General",
-    participants: DEMO_USERS,
-    unreadCount: 3,
-    createdAt: past(10080),
-    createdBy: "admin",
-    description: "General announcements for all staff",
-    lastMessage: {
-      id: "m-last-1",
-      conversationId: "conv-general",
-      senderId: "u1",
-      senderName: "Sarah Kamau",
-      content: "Morning briefing at 9am today",
-      timestamp: past(30),
-      status: "seen",
-    },
-  },
-  {
-    id: "conv-broadcast",
-    type: "group",
-    name: "#Broadcast",
-    participants: [DEMO_USERS[0], DEMO_USERS[1], DEMO_USERS[3], DEMO_USERS[4]],
-    unreadCount: 1,
-    createdAt: past(20160),
-    createdBy: "admin",
-    description: "Broadcast team coordination",
-    lastMessage: {
-      id: "m-last-2",
-      conversationId: "conv-broadcast",
-      senderId: "u4",
-      senderName: "David Otieno",
-      content: "FM transmitter is back online ✅",
-      timestamp: past(120),
-      status: "seen",
-    },
-  },
-  {
-    id: "conv-dm-u1",
-    type: "direct",
-    participants: [DEMO_USERS[0]],
-    unreadCount: 2,
-    createdAt: past(4320),
-    lastMessage: {
-      id: "m-last-3",
-      conversationId: "conv-dm-u1",
-      senderId: "u1",
-      senderName: "Sarah Kamau",
-      content: "Can you review the logbook submissions?",
-      timestamp: past(15),
-      status: "delivered",
-    },
-  },
-  {
-    id: "conv-dm-u2",
-    type: "direct",
-    participants: [DEMO_USERS[1]],
-    unreadCount: 0,
-    createdAt: past(2880),
-    lastMessage: {
-      id: "m-last-4",
-      conversationId: "conv-dm-u2",
-      senderId: "current-user",
-      senderName: "You",
-      content: "Thanks for the update!",
-      timestamp: past(180),
-      status: "seen",
-    },
-  },
-];
+// ── Map API response → Conversation type ──────────────────────────────────────
+function mapConversation(raw: any): Conversation {
+	return {
+		id: String(raw.id),
+		type: raw.type,
+		name: raw.name ?? undefined,
+		description: raw.description ?? undefined,
+		participants: (raw.participants ?? []).map((p: any) => ({
+			id: String(p.id),
+			name: p.name,
+			role: p.role ?? "",
+			department: p.department ?? undefined,
+			email: p.email,
+			isOnline: Boolean(p.isOnline),
+			lastSeen: p.lastSeen ?? undefined,
+		})),
+		lastMessage: raw.lastMessage
+			? {
+					content: raw.lastMessage.content,
+					timestamp: raw.lastMessage.timestamp,
+					senderName: raw.lastMessage.senderName,
+				}
+			: undefined,
+		unreadCount: raw.unreadCount ?? 0,
+		createdAt: raw.updated_at ?? raw.createdAt ?? now(),
+		createdBy: raw.created_by ? String(raw.created_by) : undefined,
+	};
+}
 
-const DEMO_MESSAGES: Record<string, Message[]> = {
-  "conv-general": [
-    { id: "mg1", conversationId: "conv-general", senderId: "u4", senderName: "David Otieno", content: "Good morning team! Ready for another productive day.", timestamp: past(95), status: "seen" },
-    { id: "mg2", conversationId: "conv-general", senderId: "u1", senderName: "Sarah Kamau", content: "Morning David! Don't forget the equipment check at 8am.", timestamp: past(90), status: "seen" },
-    { id: "mg3", conversationId: "conv-general", senderId: "u2", senderName: "John Mwangi", content: "On it. Also the news bulletin is ready for review.", timestamp: past(85), status: "seen", media: [{ id: "f1", type: "document", url: "#", name: "bulletin_draft.pdf", size: 245000, mimeType: "application/pdf" }] },
-    { id: "mg4", conversationId: "conv-general", senderId: "u1", senderName: "Sarah Kamau", content: "Morning briefing at 9am today", timestamp: past(30), status: "seen" },
-  ],
-  "conv-broadcast": [
-    { id: "mb1", conversationId: "conv-broadcast", senderId: "u4", senderName: "David Otieno", content: "Transmitter issue detected at 06:30. Working on it.", timestamp: past(180), status: "seen" },
-    { id: "mb2", conversationId: "conv-broadcast", senderId: "u1", senderName: "Sarah Kamau", content: "How long do you estimate for the fix?", timestamp: past(170), status: "seen" },
-    { id: "mb3", conversationId: "conv-broadcast", senderId: "u4", senderName: "David Otieno", content: "About 90 mins. I'll keep you posted.", timestamp: past(165), status: "seen" },
-    { id: "mb4", conversationId: "conv-broadcast", senderId: "u4", senderName: "David Otieno", content: "FM transmitter is back online ✅", timestamp: past(120), status: "seen" },
-  ],
-  "conv-dm-u1": [
-    { id: "md1", conversationId: "conv-dm-u1", senderId: "current-user", senderName: "You", content: "Hi Sarah, how are the attachees settling in?", timestamp: past(60), status: "seen" },
-    { id: "md2", conversationId: "conv-dm-u1", senderId: "u1", senderName: "Sarah Kamau", content: "Going well! Most of them have submitted their Week 1 logbooks already.", timestamp: past(45), status: "seen" },
-    { id: "md3", conversationId: "conv-dm-u1", senderId: "u1", senderName: "Sarah Kamau", content: "Can you review the logbook submissions?", timestamp: past(15), status: "delivered" },
-  ],
-  "conv-dm-u2": [
-    { id: "md4", conversationId: "conv-dm-u2", senderId: "u2", senderName: "John Mwangi", content: "Hey, sent over the news brief for today.", timestamp: past(200), status: "seen" },
-    { id: "md5", conversationId: "conv-dm-u2", senderId: "current-user", senderName: "You", content: "Thanks for the update!", timestamp: past(180), status: "seen" },
-  ],
-};
+// ── Map API response → Message type ──────────────────────────────────────────
+function mapMessage(raw: any, conversationId: string): Message {
+	return {
+		id: String(raw.id),
+		conversationId,
+		senderId: String(raw.senderId ?? raw.sender_id),
+		senderName: raw.senderName ?? raw.sender_name ?? "Unknown",
+		content: raw.content ?? "",
+		timestamp: raw.timestamp ?? raw.created_at,
+		status: (raw.status as MessageStatus) ?? "sent",
+		isSystem: Boolean(raw.isSystem ?? raw.is_system),
+		media: Array.isArray(raw.media)
+			? raw.media.map((m: any) => ({
+					id: String(m.id),
+					type: m.type as MediaType,
+					url: m.url,
+					name: m.name,
+					size: m.size ?? 0,
+					mimeType: m.mime_type ?? m.mimeType ?? "",
+				}))
+			: undefined,
+		callRecord: raw.callRecord
+			? {
+					id: String(raw.callRecord.id),
+					type: raw.callRecord.type,
+					status: raw.callRecord.status,
+					initiatorId: String(raw.callRecord.initiatorId),
+					recipientId: String(raw.callRecord.recipientId),
+					startedAt: raw.callRecord.started_at ?? now(),
+					duration: raw.callRecord.duration ?? undefined,
+				}
+			: undefined,
+	};
+}
 
 export const useChatStore = create<ChatState>()(
-  persist(
-    (set, get) => ({
-      isChatOpen: false,
-      isExpanded: false,
-      activeConversationId: null,
-      activeTab: "groups",
+	persist(
+		(set, get) => ({
+			// ── Initial state ────────────────────────────────────────────────────
+			isChatOpen: false,
+			isExpanded: false,
+			activeConversationId: null,
+			activeTab: "groups",
+			isLoadingConversations: false,
+			isLoadingMessages: {},
+			conversations: [],
+			messages: {},
+			onlineUsers: {},
+			typingUsers: {},
+			auditLogs: [],
+			activeCall: null,
+			callStatus: null,
+			_ws: null,
 
-      conversations: DEMO_CONVERSATIONS,
-      messages: DEMO_MESSAGES,
-      onlineUsers: { u1: true, u2: true, u4: true, u6: true },
-      typingUsers: {},
-      auditLogs: [],
-      activeCall: null,
-      callStatus: null,
+			// ── UI actions ───────────────────────────────────────────────────────
+			toggleChat: () =>
+				set((s) => ({
+					isChatOpen: !s.isChatOpen,
+					activeConversationId: s.isChatOpen ? null : s.activeConversationId,
+				})),
+			toggleExpanded: () => set((s) => ({ isExpanded: !s.isExpanded })),
+			setActiveConversation: (id) => set({ activeConversationId: id }),
+			setActiveTab: (tab) => set({ activeTab: tab }),
 
-      toggleChat: () => set((s) => ({ isChatOpen: !s.isChatOpen, activeConversationId: s.isChatOpen ? null : s.activeConversationId })),
-      toggleExpanded: () => set((s) => ({ isExpanded: !s.isExpanded })),
-      setActiveConversation: (id) => set({ activeConversationId: id }),
-      setActiveTab: (tab) => set({ activeTab: tab }),
+			// ── Load conversations from API ──────────────────────────────────────
+			loadConversations: async () => {
+				set({ isLoadingConversations: true });
+				try {
+					const res = await chatApi.conversations();
+					const convs: Conversation[] = (res.data ?? []).map(mapConversation);
+					set({ conversations: convs });
 
-      addMessage: (message) => {
-        set((s) => {
-          const existing = s.messages[message.conversationId] || [];
-          const conversations = s.conversations.map((c) =>
-            c.id === message.conversationId
-              ? { ...c, lastMessage: message, unreadCount: message.senderId !== "current-user" && s.activeConversationId !== message.conversationId ? c.unreadCount + 1 : c.unreadCount }
-              : c
-          );
-          return {
-            messages: { ...s.messages, [message.conversationId]: [...existing, message] },
-            conversations,
-          };
-        });
-      },
+					// Also fetch online users
+					try {
+						const presRes = await chatApi.onlineUsers();
+						const online: Record<string, boolean> = {};
+						(presRes.data ?? []).forEach((u: any) => {
+							online[String(u.id)] = true;
+						});
+						set({ onlineUsers: online });
+					} catch {
+						// presence is non-critical
+					}
+				} catch (err) {
+					console.error("[chatStore] loadConversations failed:", err);
+				} finally {
+					set({ isLoadingConversations: false });
+				}
+			},
 
-      updateMessageStatus: (conversationId, messageId, status) => {
-        set((s) => ({
-          messages: {
-            ...s.messages,
-            [conversationId]: (s.messages[conversationId] || []).map((m) =>
-              m.id === messageId ? { ...m, status } : m
-            ),
-          },
-        }));
-      },
+			// ── Load messages for a conversation ────────────────────────────────
+			loadMessages: async (conversationId) => {
+				set((s) => ({
+					isLoadingMessages: { ...s.isLoadingMessages, [conversationId]: true },
+				}));
+				try {
+					const res = await chatApi.messages(conversationId);
+					const msgs: Message[] = (res.data?.results ?? res.data ?? []).map(
+						(m: any) => mapMessage(m, conversationId),
+					);
+					set((s) => ({
+						messages: { ...s.messages, [conversationId]: msgs },
+					}));
+				} catch (err) {
+					console.error("[chatStore] loadMessages failed:", err);
+				} finally {
+					set((s) => ({
+						isLoadingMessages: {
+							...s.isLoadingMessages,
+							[conversationId]: false,
+						},
+					}));
+				}
+			},
 
-      sendMessage: (conversationId, senderId, senderName, content, media) => {
-        const message: Message = {
-          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          conversationId,
-          senderId,
-          senderName,
-          content,
-          timestamp: now(),
-          status: "sending",
-          media,
-        };
-        get().addMessage(message);
-        // Simulate delivery
-        setTimeout(() => get().updateMessageStatus(conversationId, message.id, "sent"), 500);
-        setTimeout(() => get().updateMessageStatus(conversationId, message.id, "delivered"), 1200);
-        return message;
-      },
+			// ── Add a message locally (optimistic / WS push) ─────────────────────
+			addMessage: (message) => {
+				set((s) => {
+					const existing = s.messages[message.conversationId] || [];
+					// Avoid duplicates (WS echo after REST POST)
+					if (existing.some((m) => m.id === message.id)) return {};
+					const conversations = s.conversations.map((c) =>
+						c.id === message.conversationId
+							? {
+									...c,
+									lastMessage: {
+										content: message.content,
+										timestamp: message.timestamp,
+										senderName: message.senderName,
+									},
+									unreadCount:
+										message.senderId !== "current-user" &&
+										s.activeConversationId !== message.conversationId
+											? c.unreadCount + 1
+											: c.unreadCount,
+								}
+							: c,
+					);
+					return {
+						messages: {
+							...s.messages,
+							[message.conversationId]: [...existing, message],
+						},
+						conversations,
+					};
+				});
+			},
 
-      getOrCreateConversation: (currentUser, otherUser) => {
-        const state = get();
-        // Find existing DM between these two users
-        const existing = state.conversations.find(
-          (c) => c.type === "direct" && c.participants.some((p) => p.id === otherUser.id)
-        );
-        if (existing) return existing.id;
+			updateMessageStatus: (conversationId, messageId, status) => {
+				set((s) => ({
+					messages: {
+						...s.messages,
+						[conversationId]: (s.messages[conversationId] || []).map((m) =>
+							m.id === messageId ? { ...m, status } : m,
+						),
+					},
+				}));
+			},
 
-        // Create new conversation
-        const newConv: Conversation = {
-          id: `conv-dm-${Date.now()}`,
-          type: "direct",
-          participants: [otherUser],
-          unreadCount: 0,
-          createdAt: now(),
-        };
-        set((s) => ({ conversations: [newConv, ...s.conversations] }));
-        return newConv.id;
-      },
+			// ── Send message — optimistic then confirm with API ──────────────────
+			sendMessage: async (
+				conversationId,
+				senderId,
+				senderName,
+				content,
+				media,
+			) => {
+				const tempId = `temp-${Date.now()}-${Math.random()
+					.toString(36)
+					.slice(2)}`;
+				const optimistic: Message = {
+					id: tempId,
+					conversationId,
+					senderId,
+					senderName,
+					content,
+					timestamp: now(),
+					status: "sending",
+					media,
+				};
+				get().addMessage(optimistic);
 
-      createGroup: (name, description, creatorId, creatorName, creatorRole, participants) => {
-        // Backend enforcement: only admin/system_admin can create groups
-        if (!["system_admin", "broadcast_admin", "hr_officer", "executive"].includes(creatorRole)) {
-          const log: AuditLog = {
-            id: `audit-${Date.now()}`,
-            action: "group_creation_denied",
-            performedBy: creatorId,
-            performedByName: creatorName,
-            timestamp: now(),
-            groupName: name,
-            reason: "Insufficient permissions",
-          };
-          set((s) => ({ auditLogs: [...s.auditLogs, log] }));
-          return { success: false, error: "Only admins can create groups." };
-        }
+				try {
+					// Upload media first if any local files provided
+					let mediaIds: string[] = [];
+					if (media && media.length > 0) {
+						const uploads = await Promise.all(
+							media
+								.filter((m) => m.url.startsWith("blob:"))
+								.map(async (m) => {
+									const blob = await fetch(m.url).then((r) => r.blob());
+									const file = new File([blob], m.name, { type: m.mimeType });
+									const up = await chatApi.uploadMedia(file, conversationId);
+									return String(up.data.id);
+								}),
+						);
+						mediaIds = uploads;
+					}
 
-        const groupId = `conv-group-${Date.now()}`;
-        const newGroup: Conversation = {
-          id: groupId,
-          type: "group",
-          name: `#${name.toLowerCase().replace(/\s+/g, "-")}`,
-          description,
-          participants,
-          unreadCount: 0,
-          createdAt: now(),
-          createdBy: creatorId,
-        };
+					const res = await chatApi.sendMessage(conversationId, {
+						content,
+						media_ids: mediaIds,
+					});
+					const confirmed = mapMessage(res.data, conversationId);
 
-        const systemMsg: Message = {
-          id: `msg-system-${Date.now()}`,
-          conversationId: groupId,
-          senderId: "system",
-          senderName: "System",
-          content: `Group "${name}" created by ${creatorName}`,
-          timestamp: now(),
-          status: "seen",
-          isSystem: true,
-        };
+					// Replace temp message with confirmed one
+					set((s) => ({
+						messages: {
+							...s.messages,
+							[conversationId]: (s.messages[conversationId] || []).map((m) =>
+								m.id === tempId ? confirmed : m,
+							),
+						},
+					}));
+					return confirmed;
+				} catch (err) {
+					// Mark as failed (keep as 'sending' so user sees it didn't go)
+					console.error("[chatStore] sendMessage failed:", err);
+					return optimistic;
+				}
+			},
 
-        const log: AuditLog = {
-          id: `audit-${Date.now()}`,
-          action: "group_created",
-          performedBy: creatorId,
-          performedByName: creatorName,
-          timestamp: now(),
-          groupName: name,
-        };
+			// ── Get or create a DM conversation via API ──────────────────────────
+			getOrCreateConversation: async (currentUser, otherUser) => {
+				const state = get();
+				// Check local cache first
+				const existing = state.conversations.find(
+					(c) =>
+						c.type === "direct" &&
+						c.participants.some((p) => p.id === otherUser.id),
+				);
+				if (existing) return existing.id;
 
-        set((s) => ({
-          conversations: [newGroup, ...s.conversations],
-          messages: { ...s.messages, [groupId]: [systemMsg] },
-          auditLogs: [...s.auditLogs, log],
-        }));
+				try {
+					const res = await chatApi.createDirectConversation(otherUser.id);
+					const conv = mapConversation(res.data);
+					set((s) => {
+						if (s.conversations.some((c) => c.id === conv.id)) return {};
+						return { conversations: [conv, ...s.conversations] };
+					});
+					return conv.id;
+				} catch (err) {
+					console.error("[chatStore] createDirectConversation failed:", err);
+					// Fallback: create locally so UI doesn't break
+					const fallbackId = `conv-dm-${Date.now()}`;
+					const fallback: Conversation = {
+						id: fallbackId,
+						type: "direct",
+						participants: [otherUser],
+						unreadCount: 0,
+						createdAt: now(),
+					};
+					set((s) => ({ conversations: [fallback, ...s.conversations] }));
+					return fallbackId;
+				}
+			},
 
-        return { success: true, groupId };
-      },
+			// ── Create group via API (admin only, enforced on backend) ───────────
+			createGroup: async (
+				name,
+				description,
+				creatorId,
+				creatorName,
+				creatorRole,
+				participants,
+			) => {
+				// Client-side role guard (backend also enforces this)
+				const allowed = [
+					"system_admin",
+					"broadcast_admin",
+					"hr_officer",
+					"executive",
+				].includes(creatorRole);
+				if (!allowed) {
+					return { success: false, error: "Only admins can create groups." };
+				}
 
-      setTyping: (conversationId, userId, isTyping) => {
-        set((s) => ({
-          typingUsers: {
-            ...s.typingUsers,
-            [conversationId]: {
-              ...(s.typingUsers[conversationId] || {}),
-              [userId]: isTyping,
-            },
-          },
-        }));
-      },
+				try {
+					const res = await chatApi.createGroup({
+						name,
+						description,
+						participant_ids: participants.map((p) => p.id),
+					});
+					const conv = mapConversation(res.data);
+					set((s) => ({ conversations: [conv, ...s.conversations] }));
+					return { success: true, groupId: conv.id };
+				} catch (err: any) {
+					const msg = err?.response?.data?.detail ?? "Failed to create group.";
+					return { success: false, error: msg };
+				}
+			},
 
-      setUserOnline: (userId, isOnline) => {
-        set((s) => ({ onlineUsers: { ...s.onlineUsers, [userId]: isOnline } }));
-      },
+			// ── Mark conversation read via API ───────────────────────────────────
+			markConversationRead: async (conversationId) => {
+				set((s) => ({
+					conversations: s.conversations.map((c) =>
+						c.id === conversationId ? { ...c, unreadCount: 0 } : c,
+					),
+					messages: {
+						...s.messages,
+						[conversationId]: (s.messages[conversationId] || []).map((m) =>
+							m.senderId !== "current-user"
+								? { ...m, status: "seen" as MessageStatus }
+								: m,
+						),
+					},
+				}));
+				try {
+					await chatApi.markRead(conversationId);
+				} catch {
+					// Non-critical — local state already updated
+				}
+			},
 
-      startCall: (type, initiatorId, recipientId, conversationId) => {
-        const call: CallRecord = {
-          id: `call-${Date.now()}`,
-          type,
-          status: "ringing",
-          initiatorId,
-          recipientId,
-          startedAt: now(),
-        };
-        set({ activeCall: call, callStatus: "ringing" });
-        // Simulate call connection after 3 seconds (demo)
-        setTimeout(() => {
-          set({ callStatus: "connected" });
-          set((s) => s.activeCall ? { activeCall: { ...s.activeCall, status: "connected" } } : {});
-        }, 3000);
-      },
+			// ── Typing / presence (local, driven by WS) ──────────────────────────
+			setTyping: (conversationId, userId, isTyping) => {
+				set((s) => ({
+					typingUsers: {
+						...s.typingUsers,
+						[conversationId]: {
+							...(s.typingUsers[conversationId] || {}),
+							[userId]: isTyping,
+						},
+					},
+				}));
+			},
 
-      endCall: (status) => {
-        const state = get();
-        if (state.activeCall) {
-          const endedCall = { ...state.activeCall, status, endedAt: now() };
-          if (endedCall.startedAt) {
-            const start = new Date(endedCall.startedAt).getTime();
-            const end = new Date(endedCall.endedAt!).getTime();
-            endedCall.duration = Math.round((end - start) / 1000);
-          }
-          // Add call record to conversation messages
-          const convId = state.conversations.find(
-            (c) => c.type === "direct" && c.participants.some((p) => p.id === state.activeCall!.recipientId || p.id === state.activeCall!.initiatorId)
-          )?.id;
+			setUserOnline: (userId, isOnline) => {
+				set((s) => ({ onlineUsers: { ...s.onlineUsers, [userId]: isOnline } }));
+			},
 
-          if (convId) {
-            const callMsg: Message = {
-              id: `msg-call-${Date.now()}`,
-              conversationId: convId,
-              senderId: endedCall.initiatorId,
-              senderName: "You",
-              content: "",
-              timestamp: now(),
-              status: "seen",
-              callRecord: endedCall,
-            };
-            get().addMessage(callMsg);
-          }
-        }
-        set({ activeCall: null, callStatus: null });
-      },
+			// ── Calls ─────────────────────────────────────────────────────────────
+			startCall: async (type, initiatorId, recipientId, conversationId) => {
+				const optimisticCall: CallRecord = {
+					id: `call-${Date.now()}`,
+					type,
+					status: "ringing",
+					initiatorId,
+					recipientId,
+					startedAt: now(),
+				};
+				set({ activeCall: optimisticCall, callStatus: "ringing" });
 
-      markConversationRead: (conversationId) => {
-        set((s) => ({
-          conversations: s.conversations.map((c) =>
-            c.id === conversationId ? { ...c, unreadCount: 0 } : c
-          ),
-          messages: {
-            ...s.messages,
-            [conversationId]: (s.messages[conversationId] || []).map((m) =>
-              m.senderId !== "current-user" ? { ...m, status: "seen" as MessageStatus } : m
-            ),
-          },
-        }));
-      },
+				try {
+					const res = await chatApi.initiateCall({
+						recipient_id: recipientId,
+						type,
+						conversation_id: conversationId,
+					});
+					const serverCall: CallRecord = {
+						id: String(res.data.id),
+						type: res.data.type,
+						status: res.data.status,
+						initiatorId: String(res.data.initiatorId),
+						recipientId: String(res.data.recipientId),
+						startedAt: res.data.started_at,
+					};
+					set({ activeCall: serverCall, callStatus: "ringing" });
+				} catch (err) {
+					console.error("[chatStore] initiateCall failed:", err);
+					// Keep optimistic call so UI doesn't break
+				}
+			},
 
-      getTotalUnread: () => get().conversations.reduce((sum, c) => sum + c.unreadCount, 0),
-    }),
-    {
-      name: "nexus-chat-store",
-      partialize: (s) => ({
-        conversations: s.conversations,
-        messages: s.messages,
-        auditLogs: s.auditLogs,
-        isChatOpen: s.isChatOpen,
-      }),
-    }
-  )
+			endCall: async (status) => {
+				const state = get();
+				if (!state.activeCall) return;
+
+				const endedAt = now();
+				const duration = Math.round(
+					(new Date(endedAt).getTime() -
+						new Date(state.activeCall.startedAt).getTime()) /
+						1000,
+				);
+
+				// Find which conversation this call belongs to
+				const convId = state.conversations.find(
+					(c) =>
+						c.type === "direct" &&
+						c.participants.some(
+							(p) =>
+								p.id === state.activeCall!.recipientId ||
+								p.id === state.activeCall!.initiatorId,
+						),
+				)?.id;
+
+				// Add call bubble to messages
+				if (convId) {
+					const callMsg: Message = {
+						id: `msg-call-${Date.now()}`,
+						conversationId: convId,
+						senderId: state.activeCall.initiatorId,
+						senderName: "You",
+						content: "",
+						timestamp: endedAt,
+						status: "seen",
+						callRecord: { ...state.activeCall, status, endedAt, duration },
+					};
+					get().addMessage(callMsg);
+				}
+
+				// Tell backend
+				try {
+					await chatApi.endCall(state.activeCall.id, { status, duration });
+				} catch {
+					// Non-critical
+				}
+
+				set({ activeCall: null, callStatus: null });
+			},
+
+			getTotalUnread: () =>
+				get().conversations.reduce((sum, c) => sum + c.unreadCount, 0),
+
+			// ── WebSocket lifecycle ───────────────────────────────────────────────
+			connectWS: (token: string) => {
+				// Don't double-connect
+				if (get()._ws) return;
+
+				// In dev, Django runs on :8000 separately from Vite (:5173).
+				// In production (nginx), WS is proxied from the same host.
+				const wsBase =
+					import.meta.env.VITE_WS_URL ??
+					(import.meta.env.DEV
+						? "ws://127.0.0.1:8000/ws/chat"
+						: `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws/chat`);
+
+				const ws = new ChatWebSocket(wsBase, token);
+
+				ws.on("message", (payload: any) => {
+					const convId = String(
+						payload.conversation_id ?? payload.conversationId,
+					);
+					const msg = mapMessage(payload, convId);
+					get().addMessage(msg);
+				});
+
+				ws.on("typing", (payload: any) => {
+					get().setTyping(
+						String(payload.conversation_id),
+						String(payload.user_id),
+						Boolean(payload.is_typing),
+					);
+				});
+
+				ws.on("presence", (payload: any) => {
+					get().setUserOnline(
+						String(payload.user_id),
+						Boolean(payload.is_online),
+					);
+					// Refresh online status in participants
+					set((s) => ({
+						conversations: s.conversations.map((c) => ({
+							...c,
+							participants: c.participants.map((p) =>
+								p.id === String(payload.user_id)
+									? { ...p, isOnline: Boolean(payload.is_online) }
+									: p,
+							),
+						})),
+					}));
+				});
+
+				ws.on("call_invite", (payload: any) => {
+					// Incoming call — set as active call
+					const call: CallRecord = {
+						id: String(payload.id),
+						type: payload.type,
+						status: "ringing",
+						initiatorId: String(payload.initiatorId),
+						recipientId: String(payload.recipientId),
+						startedAt: payload.started_at ?? now(),
+					};
+					set({ activeCall: call, callStatus: "ringing" });
+				});
+
+				ws.on("call_status", (payload: any) => {
+					set((s) =>
+						s.activeCall?.id === String(payload.call_id)
+							? {
+									callStatus: payload.status as CallStatus,
+									activeCall: { ...s.activeCall!, status: payload.status },
+								}
+							: {},
+					);
+				});
+
+				ws.connect();
+				set({ _ws: ws });
+			},
+
+			disconnectWS: () => {
+				const ws = get()._ws;
+				if (ws) {
+					ws.disconnect();
+					set({ _ws: null });
+				}
+			},
+		}),
+		{
+			name: "nexus-chat-store",
+			partialize: (s) => ({
+				conversations: s.conversations,
+				messages: s.messages,
+				auditLogs: s.auditLogs,
+				isChatOpen: s.isChatOpen,
+			}),
+		},
+	),
 );

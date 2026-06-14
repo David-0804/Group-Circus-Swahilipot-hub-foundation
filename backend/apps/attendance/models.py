@@ -44,7 +44,7 @@ class AttendanceRecord(TimeStampedModel):
     approved_by               = models.ForeignKey('accounts.User', null=True, blank=True, on_delete=models.SET_NULL, related_name='approved_attendance')
     qr_code_used              = models.CharField(max_length=100, blank=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         unique_together = [['user', 'date']]
         ordering = ['-date']
         indexes = [
@@ -74,7 +74,7 @@ class GeofenceViolation(TimeStampedModel):
     alert_sent              = models.BooleanField(default=False)
     acknowledged            = models.BooleanField(default=False)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['-timestamp']
 
 
@@ -102,5 +102,5 @@ class LeaveRequest(TimeStampedModel):
     reviewed_at    = models.DateTimeField(null=True, blank=True)
     attachments    = models.FileField(upload_to='leave/attachments/', null=True, blank=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['-created_at']

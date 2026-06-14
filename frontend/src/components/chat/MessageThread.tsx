@@ -1,4 +1,5 @@
 // MessageThread — Center panel: message bubbles, input, media, calls
+// Updated: calls real API for send, load, typing via WebSocket
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
 	Phone,
@@ -17,14 +18,16 @@ import {
 	PhoneCall,
 	PhoneMissed,
 	PhoneOff,
+	Loader2,
+	RefreshCw,
 } from "lucide-react";
 import {
 	useChatStore,
 	type Message,
 	type MediaAttachment,
 } from "../../stores/chatStore";
-
 import { useAuthStore } from "../../services/api";
+import { chatApi } from "../../services/chatApi";
 import clsx from "clsx";
 
 interface Props {
@@ -53,12 +56,19 @@ function MessageStatusIcon({ status }: { status: Message["status"] }) {
 function MediaPreview({ media }: { media: MediaAttachment }) {
 	const Icon = MEDIA_ICONS[media.type] || FileText;
 	const sizeKB = Math.round(media.size / 1024);
-
 	if (media.type === "image") {
 		return (
 			<div className="rounded-lg overflow-hidden border border-surface-border max-w-[200px]">
 				<div className="bg-surface-muted flex items-center justify-center h-28 relative">
-					<Image size={24} className="text-slate-500" />
+					{media.url && !media.url.startsWith("#") ? (
+						<img
+							src={media.url}
+							alt={media.name}
+							className="object-cover w-full h-full"
+						/>
+					) : (
+						<Image size={24} className="text-slate-500" />
+					)}
 					<span className="absolute bottom-1 left-1 text-[10px] text-slate-400 bg-black/50 px-1 rounded">
 						{media.name}
 					</span>
@@ -66,9 +76,12 @@ function MediaPreview({ media }: { media: MediaAttachment }) {
 			</div>
 		);
 	}
-
 	return (
-		<div className="flex items-center gap-2.5 bg-surface-muted/60 rounded-lg px-3 py-2 border border-surface-border max-w-[220px]">
+		<a
+			href={media.url}
+			target="_blank"
+			rel="noopener noreferrer"
+			className="flex items-center gap-2.5 bg-surface-muted/60 rounded-lg px-3 py-2 border border-surface-border max-w-[220px] hover:bg-surface-elevated transition-colors">
 			<div className="w-8 h-8 rounded-lg bg-Swahilipot-600/20 flex items-center justify-center shrink-0">
 				<Icon size={14} className="text-Swahilipot-400" />
 			</div>
@@ -76,7 +89,7 @@ function MediaPreview({ media }: { media: MediaAttachment }) {
 				<p className="text-xs text-slate-200 truncate">{media.name}</p>
 				<p className="text-[10px] text-slate-500">{sizeKB} KB</p>
 			</div>
-		</div>
+		</a>
 	);
 }
 
@@ -108,7 +121,6 @@ function CallBubble({
 			sec = s % 60;
 		return `${m}:${String(sec).padStart(2, "0")}`;
 	};
-
 	return (
 		<div
 			className={clsx(
@@ -165,25 +177,30 @@ export function MessageThread({ conversationId, onProfileClick }: Props) {
 		messages,
 		typingUsers,
 		onlineUsers,
+		isLoadingMessages,
 		sendMessage,
 		setTyping,
 		startCall,
 		activeCall,
 		markConversationRead,
+		loadMessages,
+		_ws,
 	} = useChatStore();
 
 	const [inputText, setInputText] = useState("");
-	const [isTyping, setIsTypingLocal] = useState(false);
+	const [isTypingLocal, setIsTypingLocal] = useState(false);
 	const typingTimer = useRef<ReturnType<typeof setTimeout>>();
 	const bottomRef = useRef<HTMLDivElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
+	const currentUserId = user?.id ? String(user.id) : "current-user";
 	const conversation = conversations.find((c) => c.id === conversationId);
 	const threadMessages = messages[conversationId] || [];
+	const isLoading = isLoadingMessages[conversationId] ?? false;
 
 	const typingInConv = typingUsers[conversationId] || {};
 	const typingNames = Object.entries(typingInConv)
-		.filter(([uid, typing]) => typing && uid !== (user?.id || "current-user"))
+		.filter(([uid, typing]) => typing && uid !== currentUserId)
 		.map(([uid]) => {
 			const p = conversation?.participants.find((p) => p.id === uid);
 			return p ? p.name.split(" ")[0] : uid;
@@ -195,42 +212,43 @@ export function MessageThread({ conversationId, onProfileClick }: Props) {
 		? (onlineUsers[otherParticipant.id] ?? otherParticipant.isOnline)
 		: false;
 
-	// Scroll to bottom on new messages
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [threadMessages.length, typingNames.length]);
 
-	// Mark as read on open
 	useEffect(() => {
 		markConversationRead(conversationId);
 	}, [conversationId]);
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setInputText(e.target.value);
-		if (!isTyping) {
+		if (!isTypingLocal) {
 			setIsTypingLocal(true);
-			setTyping(conversationId, user?.id || "current-user", true);
+			setTyping(conversationId, currentUserId, true);
+			// Send via WebSocket
+			_ws?.sendTyping(conversationId, true);
 		}
 		clearTimeout(typingTimer.current);
 		typingTimer.current = setTimeout(() => {
 			setIsTypingLocal(false);
-			setTyping(conversationId, user?.id || "current-user", false);
+			setTyping(conversationId, currentUserId, false);
+			_ws?.sendTyping(conversationId, false);
 		}, 2000);
 	};
 
-	const handleSend = () => {
+	const handleSend = async () => {
 		const text = inputText.trim();
 		if (!text) return;
-		sendMessage(
+		setInputText("");
+		setIsTypingLocal(false);
+		setTyping(conversationId, currentUserId, false);
+		clearTimeout(typingTimer.current);
+		await sendMessage(
 			conversationId,
-			user?.id || "current-user",
+			currentUserId,
 			user?.full_name || "You",
 			text,
 		);
-		setInputText("");
-		setIsTypingLocal(false);
-		setTyping(conversationId, user?.id || "current-user", false);
-		clearTimeout(typingTimer.current);
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -240,7 +258,7 @@ export function MessageThread({ conversationId, onProfileClick }: Props) {
 		}
 	};
 
-	const handleFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
 		const type = file.type.startsWith("image/")
@@ -258,9 +276,9 @@ export function MessageThread({ conversationId, onProfileClick }: Props) {
 			size: file.size,
 			mimeType: file.type,
 		};
-		sendMessage(
+		await sendMessage(
 			conversationId,
-			user?.id || "current-user",
+			currentUserId,
 			user?.full_name || "You",
 			"",
 			[media],
@@ -270,12 +288,7 @@ export function MessageThread({ conversationId, onProfileClick }: Props) {
 
 	const handleCall = (type: "voice" | "video") => {
 		if (!otherParticipant || activeCall) return;
-		startCall(
-			type,
-			user?.id || "current-user",
-			otherParticipant.id,
-			conversationId,
-		);
+		startCall(type, currentUserId, otherParticipant.id, conversationId);
 	};
 
 	const getInitials = (name: string) =>
@@ -299,10 +312,11 @@ export function MessageThread({ conversationId, onProfileClick }: Props) {
 		return groups;
 	};
 
-	const formatTime = (iso: string) => {
-		const d = new Date(iso);
-		return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-	};
+	const formatTime = (iso: string) =>
+		new Date(iso).toLocaleTimeString([], {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
 
 	const groupedMessages = groupMessages(threadMessages);
 
@@ -339,7 +353,6 @@ export function MessageThread({ conversationId, onProfileClick }: Props) {
 								)}
 							</p>
 						</div>
-						{/* Call buttons — only for direct messages */}
 						<button
 							onClick={() => handleCall("voice")}
 							disabled={!!activeCall}
@@ -375,6 +388,12 @@ export function MessageThread({ conversationId, onProfileClick }: Props) {
 							</p>
 						</div>
 						<button
+							onClick={() => loadMessages(conversationId)}
+							className="btn-ghost btn-icon"
+							title="Refresh">
+							<RefreshCw size={14} />
+						</button>
+						<button
 							onClick={onProfileClick}
 							className="btn-ghost btn-icon"
 							title="Group info">
@@ -386,99 +405,99 @@ export function MessageThread({ conversationId, onProfileClick }: Props) {
 
 			{/* ── Messages ── */}
 			<div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-				{groupedMessages.map((group, gi) => {
-					const isMine = group[0].senderId === (user?.id || "current-user");
-					const isSystem = group[0].isSystem;
+				{isLoading ? (
+					<div className="flex justify-center items-center h-full">
+						<Loader2 size={24} className="animate-spin text-slate-500" />
+					</div>
+				) : threadMessages.length === 0 ? (
+					<div className="flex justify-center items-center h-full text-slate-600 text-sm">
+						No messages yet. Say hello!
+					</div>
+				) : (
+					groupedMessages.map((group, gi) => {
+						const isMine = group[0].senderId === currentUserId;
+						const isSystem = group[0].isSystem;
 
-					if (isSystem) {
-						return (
-							<div key={gi} className="flex justify-center">
-								<span className="text-[11px] text-slate-600 bg-surface-elevated px-3 py-1 rounded-full border border-surface-border">
-									{group[0].content}
-								</span>
-							</div>
-						);
-					}
-
-					return (
-						<div
-							key={gi}
-							className={clsx(
-								"flex gap-2.5",
-								isMine ? "flex-row-reverse" : "flex-row",
-							)}>
-							{/* Avatar */}
-							{!isMine && (
-								<div className="w-7 h-7 rounded-full bg-gradient-Nexus flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-1">
-									{getInitials(group[0].senderName)}
-								</div>
-							)}
-
-							<div
-								className={clsx(
-									"flex flex-col gap-1 max-w-[75%]",
-									isMine ? "items-end" : "items-start",
-								)}>
-								{/* Sender name (groups only) */}
-								{!isMine && conversation?.type === "group" && (
-									<span className="text-[11px] font-medium text-Swahilipot-400 px-1">
-										{group[0].senderName}
+						if (isSystem) {
+							return (
+								<div key={gi} className="flex justify-center">
+									<span className="text-[11px] text-slate-600 bg-surface-elevated px-3 py-1 rounded-full border border-surface-border">
+										{group[0].content}
 									</span>
+								</div>
+							);
+						}
+
+						return (
+							<div
+								key={gi}
+								className={clsx(
+									"flex gap-2.5",
+									isMine ? "flex-row-reverse" : "flex-row",
+								)}>
+								{!isMine && (
+									<div className="w-7 h-7 rounded-full bg-gradient-Nexus flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-1">
+										{getInitials(group[0].senderName)}
+									</div>
 								)}
 
-								{group.map((msg, mi) => (
-									<div key={msg.id}>
-										{/* Call record */}
-										{msg.callRecord && (
-											<CallBubble call={msg.callRecord} isMine={isMine} />
-										)}
+								<div
+									className={clsx(
+										"flex flex-col gap-1 max-w-[75%]",
+										isMine ? "items-end" : "items-start",
+									)}>
+									{!isMine && conversation?.type === "group" && (
+										<span className="text-[11px] font-medium text-Swahilipot-400 px-1">
+											{group[0].senderName}
+										</span>
+									)}
 
-										{/* Media attachments */}
-										{msg.media?.map((m) => (
-											<div key={m.id} className="mb-1">
-												<MediaPreview media={m} />
-											</div>
-										))}
-
-										{/* Text content */}
-										{msg.content && (
-											<div
-												className={clsx(
-													"px-3.5 py-2 rounded-2xl text-sm leading-relaxed",
-													isMine
-														? "bg-Swahilipot-600 text-white rounded-tr-sm"
-														: "bg-surface-elevated text-slate-200 border border-surface-border rounded-tl-sm",
-												)}>
-												{msg.content}
-											</div>
-										)}
-
-										{/* Timestamp + status (last in group) */}
-										{mi === group.length - 1 && (
-											<div
-												className={clsx(
-													"flex items-center gap-1 mt-0.5 px-1",
-													isMine ? "flex-row-reverse" : "flex-row",
-												)}>
-												<span className="text-[10px] text-slate-600">
-													{formatTime(msg.timestamp)}
-												</span>
-												{isMine && <MessageStatusIcon status={msg.status} />}
-											</div>
-										)}
-									</div>
-								))}
+									{group.map((msg, mi) => (
+										<div key={msg.id}>
+											{msg.callRecord && (
+												<CallBubble call={msg.callRecord} isMine={isMine} />
+											)}
+											{msg.media?.map((m) => (
+												<div key={m.id} className="mb-1">
+													<MediaPreview media={m} />
+												</div>
+											))}
+											{msg.content && (
+												<div
+													className={clsx(
+														"px-3.5 py-2 rounded-2xl text-sm leading-relaxed",
+														isMine
+															? "bg-Swahilipot-600 text-white rounded-tr-sm"
+															: "bg-surface-elevated text-slate-200 border border-surface-border rounded-tl-sm",
+													)}>
+													{msg.content}
+												</div>
+											)}
+											{mi === group.length - 1 && (
+												<div
+													className={clsx(
+														"flex items-center gap-1 mt-0.5 px-1",
+														isMine ? "flex-row-reverse" : "flex-row",
+													)}>
+													<span className="text-[10px] text-slate-600">
+														{formatTime(msg.timestamp)}
+													</span>
+													{isMine && <MessageStatusIcon status={msg.status} />}
+												</div>
+											)}
+										</div>
+									))}
+								</div>
 							</div>
-						</div>
-					);
-				})}
+						);
+					})
+				)}
 
-				{/* Typing indicator */}
 				<TypingIndicator names={typingNames} />
 				<div ref={bottomRef} />
 			</div>
 
-			{/* ── Input area ── */}
+			{/* ── Input ── */}
 			<div className="px-3 py-3 border-t border-surface-border bg-surface-card shrink-0">
 				<div className="flex items-center gap-2 bg-surface-elevated border border-surface-border rounded-xl px-3 py-2">
 					<input
@@ -517,3 +536,4 @@ export function MessageThread({ conversationId, onProfileClick }: Props) {
 		</div>
 	);
 }
+

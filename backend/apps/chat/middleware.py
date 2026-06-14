@@ -1,30 +1,37 @@
 """
-Nexus — JWT WebSocket Authentication Middleware
+apps/chat/middleware.py
 
-Extracts ?token=<jwt> from the query string and authenticates the scope's user.
-Drop this into the ASGI application stack (see asgi.py).
+JWTAuthMiddleware — authenticates WebSocket connections using a JWT
+passed as a query-string parameter: ws://host/ws/chat/?token=<access_token>
+
+Your existing asgi.py already imports this:
+    from apps.chat.middleware import JWTAuthMiddleware
 """
 from urllib.parse import parse_qs
-from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
+from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
-from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 
 
 @database_sync_to_async
-def get_user_from_token(token_str):
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
+def get_user_from_token(token_key: str):
     try:
-        token = AccessToken(token_str)
-        user_id = token.get("user_id")
-        return User.objects.get(pk=user_id, is_active=True)
-    except (TokenError, InvalidToken, User.DoesNotExist):
+        from rest_framework_simplejwt.tokens import AccessToken
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        token = AccessToken(token_key)
+        user_id = token["user_id"]
+        return User.objects.get(id=user_id, is_active=True)
+    except Exception:
         return AnonymousUser()
 
 
 class JWTAuthMiddleware(BaseMiddleware):
+    """
+    Reads ?token=<jwt> from the WebSocket URL and authenticates the user.
+    Sets scope["user"] so consumers can access request.user normally.
+    """
+
     async def __call__(self, scope, receive, send):
         query_string = scope.get("query_string", b"").decode()
         params = parse_qs(query_string)

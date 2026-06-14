@@ -62,7 +62,7 @@ class Branch(TimeStampedModel):
     is_active = models.BooleanField(default=True)
     is_headquarters = models.BooleanField(default=False)
 
-    class Meta:
+    class Meta:    # type: ignore
         unique_together = [['organisation', 'code']]
 
     def __str__(self):
@@ -118,6 +118,13 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         ('station_engineer', 'Station Engineer'),
     ]
 
+    FONT_CHOICES = [
+        ('default',  'Default'),
+        ('dyslexic', 'Dyslexic-friendly'),
+        ('mono',     'Monospace'),
+        ('serif',    'Serif'),
+    ]
+
     email = models.EmailField(unique=True)
     employee_id = models.CharField(max_length=50, blank=True, unique=True, null=True)
     first_name = models.CharField(max_length=100)
@@ -152,6 +159,14 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     notification_push = models.BooleanField(default=True)
     timezone_preference = models.CharField(max_length=50, default='Africa/Nairobi')
 
+    # ── Accessibility preferences (synced across devices) ──────────────────
+    font_preference = models.CharField(
+        max_length=20,
+        choices=FONT_CHOICES,
+        default='default',
+        help_text='UI font selected by the user in Accessibility settings',
+    )
+
     # Device tracking
     last_ip = models.GenericIPAddressField(null=True, blank=True)
     last_device = models.CharField(max_length=200, blank=True)
@@ -162,7 +177,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
 
     objects = UserManager()
 
-    class Meta:
+    class Meta:  # type: ignore
         indexes = [
             models.Index(fields=['email']),
             models.Index(fields=['role', 'organisation']),

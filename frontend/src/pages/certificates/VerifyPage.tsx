@@ -46,7 +46,7 @@ export default function VerifyPage() {
 						Certificate Verification
 					</h1>
 					<p className="text-sm text-slate-400 mt-1">
-						Nexus Enterprise Management System
+						Swahilipot Foundation Management System
 					</p>
 				</div>
 
@@ -129,7 +129,7 @@ export default function VerifyPage() {
 
 							<div className="mt-6 pt-4 border-t border-[#1e2a42] text-center">
 								<p className="text-[11px] text-slate-500">
-									Verified on {format(new Date(), "dd MMM yyyy, HH:mm")} · Nexus
+									Verified on {format(new Date(), "dd MMM yyyy, HH:mm")} · Swahilipot
 									Certificate Authority
 								</p>
 							</div>

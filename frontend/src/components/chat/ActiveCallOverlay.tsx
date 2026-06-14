@@ -1,11 +1,13 @@
 // ActiveCallOverlay — Floating call UI shown during voice/video calls
 import { Phone, Video, PhoneOff, Mic, MicOff, VideoOff } from "lucide-react";
 import { useChatStore } from "../../stores/chatStore";
+import { useChatApi } from "../../hooks/useChatApi";
 import { useState } from "react";
 import clsx from "clsx";
 
 export function ActiveCallOverlay() {
-	const { activeCall, callStatus, conversations, endCall } = useChatStore();
+	const { activeCall, callStatus, conversations } = useChatStore();
+	const { endCall } = useChatApi();
 	const [isMuted, setIsMuted] = useState(false);
 	const [isVideoOff, setIsVideoOff] = useState(false);
 
@@ -99,7 +101,7 @@ export function ActiveCallOverlay() {
 
 				{/* End call */}
 				<button
-					onClick={() => endCall("ended")}
+					onClick={() => activeCall && endCall(activeCall.id)}
 					className="w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-glow-red transition-all hover:scale-105 active:scale-95"
 					title="End call">
 					<PhoneOff size={18} />

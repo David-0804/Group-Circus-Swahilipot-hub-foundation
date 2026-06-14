@@ -4,16 +4,18 @@ services:
     image: postgres:16-alpine
     container_name: Nexus_postgres
     restart: unless-stopped
+    env_file:
+      - ./backend/.env 
     environment:
-      POSTGRES_DB: Nexus_db
-      POSTGRES_USER: Nexus_user
-      POSTGRES_PASSWORD: Nexus_secure_password_2026
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U Nexus_user -d Nexus_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -41,8 +43,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: Nexus_minio_user
-      MINIO_ROOT_PASSWORD: Nexus_minio_password_2026
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-Nexus_minio_user}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-Nexus_minio_password_2026}
     volumes:
       - minio_data:/data
     ports:
@@ -56,19 +58,8 @@ services:
       dockerfile: Dockerfile
     container_name: Nexus_backend
     restart: unless-stopped
-    environment:
-      SECRET_KEY: Nexus-super-secret-key-change-in-production-2026
-      DEBUG: "True"
-      DB_NAME: Nexus_db
-      DB_USER: Nexus_user
-      DB_PASSWORD: Nexus_secure_password_2026
-      DB_HOST: db
-      DB_PORT: "5432"
-      REDIS_URL: redis://redis:6379/1
-      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
-      USE_S3: "False"
-      EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
-      DEFAULT_FROM_EMAIL: "Nexus System <noreply@Nexus.system>"
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/app
       - backend_static:/app/staticfiles
@@ -81,16 +72,9 @@ services:
       redis:
         condition: service_healthy
     command: >
-      sh -c "
-        python manage.py migrate --noinput &&
-        python manage.py collectstatic --noinput --clear &&
-        gunicorn Nexus.wsgi:application
-          --bind 0.0.0.0:8000
-          --workers 2
-          --timeout 120
-          --access-logfile -
-          --error-logfile -
-      "
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput --clear &&
+             daphne -b 0.0.0.0 -p 8000 Nexus.asgi:application "
 
   # ── Celery Worker ─────────────────────────────────────────
   celery:
@@ -99,23 +83,15 @@ services:
       dockerfile: Dockerfile
     container_name: Nexus_celery
     restart: unless-stopped
-    environment:
-      SECRET_KEY: Nexus-super-secret-key-change-in-production-2026
-      DEBUG: "True"
-      DB_NAME: Nexus_db
-      DB_USER: Nexus_user
-      DB_PASSWORD: Nobody@#$123
-      DB_HOST: db
-      DB_PORT: "5432"
-      REDIS_URL: redis://redis:6379/1
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/app
     depends_on:
-      - backend
-      - redis
-      - db
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     command: celery -A Nexus worker --loglevel=info --concurrency=2
 
   # ── Celery Beat ───────────────────────────────────────────
@@ -125,22 +101,15 @@ services:
       dockerfile: Dockerfile
     container_name: Nexus_celery_beat
     restart: unless-stopped
-    environment:
-      SECRET_KEY: Nexus-super-secret-key-change-in-production-2026
-      DEBUG: "True"
-      DB_NAME: Nexus_db
-      DB_USER: Nexus_user
-      DB_PASSWORD: Nobody@#$123
-      DB_HOST: db
-      DB_PORT: "5432"
-      REDIS_URL: redis://redis:6379/1
-      CELERY_BROKER_URL: redis://redis:6379/1
-      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/app
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     command: celery -A Nexus beat --loglevel=info
 
   # ── React Frontend ────────────────────────────────────────

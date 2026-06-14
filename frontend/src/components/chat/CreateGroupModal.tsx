@@ -1,8 +1,9 @@
 // CreateGroupModal — Admin-only group creation with role guard
 import { useState } from "react";
-import { X, Hash, Users, Shield, AlertCircle } from "lucide-react";
-import { useChatStore } from  "../../stores/chatStore";
+import { X, Hash, Users, Shield, AlertCircle, Loader2 } from "lucide-react";
+import { useChatStore } from "../../stores/chatStore";
 import { useAuthStore } from "../../services/api";
+import { useChatApi } from "../../hooks/useChatApi";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 
@@ -63,7 +64,7 @@ interface Props {
 
 export function CreateGroupModal({ onClose }: Props) {
 	const { user } = useAuthStore();
-	const { createGroup, setActiveConversation } = useChatStore();
+	const { createGroup, isCreatingGroup } = useChatApi();
 
 	const [groupName, setGroupName] = useState("");
 	const [description, setDescription] = useState("");
@@ -93,24 +94,12 @@ export function CreateGroupModal({ onClose }: Props) {
 			return;
 		}
 
-		const participants = ALL_USERS.filter((u) => selectedIds.includes(u.id));
-		const result = createGroup(
-			groupName.trim(),
-			description.trim(),
-			user?.id || "current-user",
-			user?.full_name || "Admin",
-			user?.role || "",
-			participants,
-		);
-
-		if (result.success) {
-			toast.success(`Group #${groupName.toLowerCase()} created!`);
-			if (result.groupId) setActiveConversation(result.groupId);
-			onClose();
-		} else {
-			setError(result.error || "Failed to create group.");
-			toast.error(result.error || "Failed to create group.");
-		}
+		createGroup({
+			name: groupName.trim(),
+			description: description.trim(),
+			participant_ids: selectedIds,
+		});
+		onClose();
 	};
 
 	const getInitials = (name: string) =>
@@ -274,8 +263,14 @@ export function CreateGroupModal({ onClose }: Props) {
 						<button
 							onClick={handleCreate}
 							className="btn-primary btn-sm"
-							disabled={!groupName.trim()}>
-							Create Group
+							disabled={!groupName.trim() || isCreatingGroup}>
+							{isCreatingGroup ? (
+								<>
+									<Loader2 size={13} className="animate-spin" /> Creating…
+								</>
+							) : (
+								"Create Group"
+							)}
 						</button>
 					)}
 				</div>

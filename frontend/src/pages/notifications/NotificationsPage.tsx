@@ -244,6 +244,7 @@ export default function NotificationsPage() {
 		queryFn: () => notificationsApi.unreadCount().then((r) => r.data.count),
 		refetchInterval: 30_000,
 	});
+	
 
 	// Sort: unread first, then by date desc
 	const notifications = [...rawNotifications].sort((a: any, b: any) => {

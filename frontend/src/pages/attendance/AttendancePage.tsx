@@ -1,5 +1,5 @@
 // Swahilipot — Attendance Page
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import {
@@ -15,67 +15,11 @@ import {
 	Plus,
 	LogIn,
 	LogOut,
-	Navigation,
-	ThumbsUp,
-	ThumbsDown,
-	MessageSquare,
-	User,
 } from "lucide-react";
 import { attendanceApi } from "../../services/api";
 import { useAuthStore } from "../../services/api";
 import toast from "react-hot-toast";
 import clsx from "clsx";
-
-// ── All roles that may request leave ─────────────────────────────────────────
-const LEAVE_ELIGIBLE_ROLES = new Set([
-	"system_admin",
-	"broadcast_admin",
-	"hr_officer",
-	"supervisor",
-	"department_leader",
-	"executive",
-	"data_analyst",
-	"finance",
-	"broadcast_staff",
-	"journalist",
-	"presenter",
-	"editor",
-	"videographer",
-	"station_engineer",
-	"attachee",
-	"university_coordinator",
-]);
-
-// ── Roles that can approve / reject leave ────────────────────────────────────
-const LEAVE_REVIEW_ROLES = new Set([
-	"system_admin",
-	"hr_officer",
-	"supervisor",
-	"department_leader",
-	"executive",
-]);
-
-// ── Workplace coordinates (update to match your actual office location) ───────
-const WORKPLACE_LAT = -4.0435; // Swahilipot Hub, Mombasa
-const WORKPLACE_LNG = 39.6682;
-const CHECKIN_RADIUS_M = 100; // metres
-
-// ── Haversine distance helper ─────────────────────────────────────────────────
-function haversineMetres(
-	lat1: number,
-	lng1: number,
-	lat2: number,
-	lng2: number,
-): number {
-	const R = 6371000;
-	const toRad = (v: number) => (v * Math.PI) / 180;
-	const dLat = toRad(lat2 - lat1);
-	const dLng = toRad(lng2 - lng1);
-	const a =
-		Math.sin(dLat / 2) ** 2 +
-		Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-	return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 const STATUS_STYLES: Record<string, string> = {
 	present: "badge-green",
@@ -86,35 +30,6 @@ const STATUS_STYLES: Record<string, string> = {
 	holiday: "badge-purple",
 };
 
-// ── Distance badge component ──────────────────────────────────────────────────
-function DistanceBadge({
-	distance,
-	radius,
-}: {
-	distance: number | null;
-	radius: number;
-}) {
-	if (distance === null) return null;
-	const withinRange = distance <= radius;
-	return (
-		<div
-			className={clsx(
-				"flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium",
-				withinRange
-					? "bg-green-900/30 text-green-400 border border-green-500/30"
-					: "bg-red-900/30 text-red-400 border border-red-500/30",
-			)}>
-			<Navigation size={11} />
-			{Math.round(distance)}m from workplace
-			{withinRange ? (
-				<CheckCircle size={11} className="ml-0.5" />
-			) : (
-				<XCircle size={11} className="ml-0.5" />
-			)}
-		</div>
-	);
-}
-
 export default function AttendancePage() {
 	const { user } = useAuthStore();
 	const qc = useQueryClient();
@@ -123,46 +38,6 @@ export default function AttendancePage() {
 	);
 	const [showLeaveModal, setShowLeaveModal] = useState(false);
 	const [gpsLoading, setGpsLoading] = useState(false);
-
-	// ── Live GPS distance tracking ────────────────────────────────────────────
-	const [liveDistance, setLiveDistance] = useState<number | null>(null);
-	const [locationError, setLocationError] = useState<string | null>(null);
-	const watchIdRef = useRef<number | null>(null);
-
-	useEffect(() => {
-		if (!navigator.geolocation) {
-			setLocationError("Geolocation is not supported by your browser.");
-			return;
-		}
-
-		// Start watching position so the distance updates in real time
-		watchIdRef.current = navigator.geolocation.watchPosition(
-			(pos) => {
-				const d = haversineMetres(
-					pos.coords.latitude,
-					pos.coords.longitude,
-					WORKPLACE_LAT,
-					WORKPLACE_LNG,
-				);
-				setLiveDistance(d);
-				setLocationError(null);
-			},
-			(err) => {
-				setLocationError("Enable location access to see your distance.");
-				setLiveDistance(null);
-			},
-			{ enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 },
-		);
-
-		return () => {
-			if (watchIdRef.current !== null) {
-				navigator.geolocation.clearWatch(watchIdRef.current);
-			}
-		};
-	}, []);
-
-	const canRequestLeave = user?.role && LEAVE_ELIGIBLE_ROLES.has(user.role);
-	const canReviewLeave = user?.role && LEAVE_REVIEW_ROLES.has(user.role);
 
 	const { data: todayRecord, isLoading: todayLoading } = useQuery({
 		queryKey: ["attendance-today"],
@@ -190,30 +65,18 @@ export default function AttendancePage() {
 			qc.invalidateQueries({ queryKey: ["attendance-today"] });
 			toast.success("✅ Checked in successfully!");
 		},
-		onError: (e: any) => {
-			const msg =
-				e.response?.data?.detail ||
-				e.response?.data?.message ||
-				(typeof e.response?.data === "string" ? e.response.data : null) ||
-				"Check-in failed";
-			toast.error(msg);
-		},
+		onError: (e: any) =>
+			toast.error(e.response?.data?.detail || "Check-in failed"),
 	});
 
 	const checkOutMutation = useMutation({
 		mutationFn: (data: any) => attendanceApi.checkOut(data),
 		onSuccess: () => {
 			qc.invalidateQueries({ queryKey: ["attendance-today"] });
-			toast.success("👋 Checked out successfully!");
+			toast.success("Checked out successfully!");
 		},
-		onError: (e: any) => {
-			const msg =
-				e.response?.data?.detail ||
-				e.response?.data?.message ||
-				(typeof e.response?.data === "string" ? e.response.data : null) ||
-				"Check-out failed";
-			toast.error(msg);
-		},
+		onError: (e: any) =>
+			toast.error(e.response?.data?.detail || "Check-out failed"),
 	});
 
 	const handleGpsCheckIn = () => {
@@ -255,7 +118,6 @@ export default function AttendancePage() {
 
 	const isCheckedIn = !!todayRecord?.check_in_time;
 	const isCheckedOut = !!todayRecord?.check_out_time;
-	const withinRange = liveDistance !== null && liveDistance <= CHECKIN_RADIUS_M;
 
 	return (
 		<div className="space-y-6 animate-fade-in">
@@ -269,7 +131,7 @@ export default function AttendancePage() {
 						GPS-verified check-in, attendance history, and leave management
 					</p>
 				</div>
-				{canRequestLeave && (
+				{user?.role === "attachee" && (
 					<button
 						onClick={() => setShowLeaveModal(true)}
 						className="btn-secondary btn-sm">
@@ -314,29 +176,6 @@ export default function AttendancePage() {
 							<div className="skeleton h-32 rounded-xl" />
 						) : (
 							<div className="space-y-4">
-								{/* ── Live distance indicator ── */}
-								<div className="flex items-center justify-between p-3 bg-surface rounded-xl border border-surface-border">
-									<div className="flex items-center gap-2 text-sm text-slate-400">
-										<MapPin size={14} className="text-Swahilipot-400" />
-										Your distance to workstation
-									</div>
-									{locationError ? (
-										<span className="text-xs text-amber-400 flex items-center gap-1">
-											<AlertTriangle size={11} />
-											{locationError}
-										</span>
-									) : liveDistance === null ? (
-										<span className="text-xs text-slate-500 animate-pulse">
-											Detecting…
-										</span>
-									) : (
-										<DistanceBadge
-											distance={liveDistance}
-											radius={CHECKIN_RADIUS_M}
-										/>
-									)}
-								</div>
-
 								{/* Status */}
 								<div
 									className={clsx("p-4 rounded-xl border text-center", {
@@ -441,22 +280,8 @@ export default function AttendancePage() {
 									{!isCheckedIn && (
 										<button
 											onClick={handleGpsCheckIn}
-											disabled={
-												gpsLoading ||
-												checkInMutation.isPending ||
-												(liveDistance !== null && !withinRange)
-											}
-											title={
-												liveDistance !== null && !withinRange
-													? `You are ${Math.round(liveDistance)}m away — must be within ${CHECKIN_RADIUS_M}m`
-													: undefined
-											}
-											className={clsx(
-												"btn-success flex-1 justify-center py-3 text-base font-semibold",
-												liveDistance !== null &&
-													!withinRange &&
-													"opacity-50 cursor-not-allowed",
-											)}>
+											disabled={gpsLoading || checkInMutation.isPending}
+											className="btn-success flex-1 justify-center py-3 text-base font-semibold">
 											<LogIn size={18} />
 											{gpsLoading || checkInMutation.isPending
 												? "Getting Location..."
@@ -477,8 +302,9 @@ export default function AttendancePage() {
 								</div>
 
 								<p className="text-xs text-slate-500 text-center flex items-center justify-center gap-1">
-									<MapPin size={10} /> You must be within {CHECKIN_RADIUS_M}m of
-									your workplace to check in via GPS
+									<MapPin size={10} /> You must be within{" "}
+									{user?.branch ? "100m" : "range"} of your workplace to check
+									in via GPS
 								</p>
 							</div>
 						)}
@@ -633,13 +459,11 @@ export default function AttendancePage() {
 				<div className="card">
 					<div className="flex items-center justify-between mb-5">
 						<h3 className="font-semibold text-white">Leave Requests</h3>
-						{canRequestLeave && (
-							<button
-								onClick={() => setShowLeaveModal(true)}
-								className="btn-primary btn-sm">
-								<Plus size={13} /> New Request
-							</button>
-						)}
+						<button
+							onClick={() => setShowLeaveModal(true)}
+							className="btn-primary btn-sm">
+							<Plus size={13} /> New Request
+						</button>
 					</div>
 					{leaveRequests.length === 0 ? (
 						<div className="text-center py-12 text-slate-500">
@@ -649,14 +473,37 @@ export default function AttendancePage() {
 					) : (
 						<div className="space-y-3">
 							{leaveRequests.map((req: any) => (
-								<LeaveRequestCard
+								<div
 									key={req.id}
-									req={req}
-									canReview={!!canReviewLeave}
-									onReviewed={() =>
-										qc.invalidateQueries({ queryKey: ["leave-requests"] })
-									}
-								/>
+									className="p-4 bg-surface rounded-xl border border-surface-border flex items-start gap-4">
+									<div className="flex-1">
+										<div className="flex items-center gap-2 mb-1">
+											<span className="text-sm font-medium text-white capitalize">
+												{req.leave_type?.replace("_", " ")} Leave
+											</span>
+											<span
+												className={clsx("badge text-[10px]", {
+													"badge-amber": req.status === "pending",
+													"badge-green": req.status === "approved",
+													"badge-red": req.status === "rejected",
+													"badge-slate": req.status === "cancelled",
+												})}>
+												{req.status}
+											</span>
+										</div>
+										<p className="text-xs text-slate-400">
+											{format(parseISO(req.start_date), "dd MMM")} →{" "}
+											{format(parseISO(req.end_date), "dd MMM yyyy")} ·{" "}
+											{req.days_requested} day(s)
+										</p>
+										<p className="text-xs text-slate-500 mt-1">{req.reason}</p>
+										{req.review_notes && (
+											<p className="text-xs text-amber-400 mt-1 italic">
+												"{req.review_notes}"
+											</p>
+										)}
+									</div>
+								</div>
 							))}
 						</div>
 					)}
@@ -676,184 +523,6 @@ export default function AttendancePage() {
 	);
 }
 
-// ── Leave Request Card (with inline approve / reject for reviewers) ───────────
-function LeaveRequestCard({
-	req,
-	canReview,
-	onReviewed,
-}: {
-	req: any;
-	canReview: boolean;
-	onReviewed: () => void;
-}) {
-	const qc = useQueryClient();
-	const [showNotes, setShowNotes] = useState(false);
-	const [notes, setNotes] = useState("");
-	const [pendingAction, setPendingAction] = useState<
-		"approved" | "rejected" | null
-	>(null);
-
-	const reviewMutation = useMutation({
-		mutationFn: ({
-			action,
-			review_notes,
-		}: {
-			action: string;
-			review_notes: string;
-		}) => attendanceApi.reviewLeave(req.id, { status: action, review_notes }),
-		onSuccess: (_, vars) => {
-			toast.success(
-				vars.action === "approved" ? "✅ Leave approved" : "❌ Leave rejected",
-			);
-			setShowNotes(false);
-			setNotes("");
-			setPendingAction(null);
-			onReviewed();
-		},
-		onError: (e: any) => {
-			const msg =
-				e.response?.data?.detail ||
-				e.response?.data?.message ||
-				"Review failed";
-			toast.error(msg);
-		},
-	});
-
-	const handleAction = (action: "approved" | "rejected") => {
-		// If rejecting always ask for notes; approving can go direct
-		if (action === "rejected") {
-			setPendingAction(action);
-			setShowNotes(true);
-		} else {
-			reviewMutation.mutate({ action, review_notes: "" });
-		}
-	};
-
-	const handleConfirmWithNotes = () => {
-		if (!pendingAction) return;
-		reviewMutation.mutate({
-			action: pendingAction,
-			review_notes: notes.trim(),
-		});
-	};
-
-	const isPending = req.status === "pending";
-
-	return (
-		<div
-			className={clsx("p-4 bg-surface rounded-xl border flex flex-col gap-3", {
-				"border-amber-500/30": req.status === "pending",
-				"border-green-500/30": req.status === "approved",
-				"border-red-500/30": req.status === "rejected",
-				"border-surface-border": req.status === "cancelled",
-			})}>
-			{/* ── Header row ── */}
-			<div className="flex items-start justify-between gap-3">
-				<div className="flex-1">
-					<div className="flex items-center gap-2 flex-wrap mb-1">
-						{/* Show requester name for reviewers */}
-						{canReview && req.user_name && (
-							<span className="flex items-center gap-1 text-xs text-slate-400">
-								<User size={11} />
-								{req.user_name}
-							</span>
-						)}
-						<span className="text-sm font-medium text-white capitalize">
-							{req.leave_type?.replace(/_/g, " ")} Leave
-						</span>
-						<span
-							className={clsx("badge text-[10px]", {
-								"badge-amber": req.status === "pending",
-								"badge-green": req.status === "approved",
-								"badge-red": req.status === "rejected",
-								"badge-slate": req.status === "cancelled",
-							})}>
-							{req.status}
-						</span>
-					</div>
-					<p className="text-xs text-slate-400">
-						{format(parseISO(req.start_date), "dd MMM")} →{" "}
-						{format(parseISO(req.end_date), "dd MMM yyyy")} ·{" "}
-						{req.days_requested} day(s)
-					</p>
-					<p className="text-xs text-slate-500 mt-1">{req.reason}</p>
-					{req.review_notes && (
-						<p className="text-xs text-amber-400 mt-1 italic">
-							Note: {req.review_notes}
-						</p>
-					)}
-				</div>
-
-				{/* ── Review buttons (only for pending + authorised reviewer) ── */}
-				{canReview && isPending && !showNotes && (
-					<div className="flex gap-2 shrink-0">
-						<button
-							onClick={() => handleAction("approved")}
-							disabled={reviewMutation.isPending}
-							className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-900/30 text-green-400 border border-green-500/30 hover:bg-green-900/50 transition-colors disabled:opacity-50">
-							<ThumbsUp size={12} />
-							Approve
-						</button>
-						<button
-							onClick={() => handleAction("rejected")}
-							disabled={reviewMutation.isPending}
-							className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-900/30 text-red-400 border border-red-500/30 hover:bg-red-900/50 transition-colors disabled:opacity-50">
-							<ThumbsDown size={12} />
-							Reject
-						</button>
-					</div>
-				)}
-			</div>
-
-			{/* ── Notes panel (slides in when rejecting) ── */}
-			{showNotes && canReview && isPending && (
-				<div className="border-t border-surface-border pt-3 space-y-2">
-					<label className="text-xs text-slate-400 flex items-center gap-1">
-						<MessageSquare size={11} />
-						{pendingAction === "rejected"
-							? "Reason for rejection *"
-							: "Review notes (optional)"}
-					</label>
-					<textarea
-						value={notes}
-						onChange={(e) => setNotes(e.target.value)}
-						autoFocus
-						placeholder="Add a note for the requester…"
-						className="textarea h-20 text-xs w-full"
-					/>
-					<div className="flex gap-2 justify-end">
-						<button
-							onClick={() => {
-								setShowNotes(false);
-								setPendingAction(null);
-								setNotes("");
-							}}
-							className="btn-secondary btn-sm">
-							Cancel
-						</button>
-						<button
-							onClick={handleConfirmWithNotes}
-							disabled={
-								reviewMutation.isPending ||
-								(pendingAction === "rejected" && !notes.trim())
-							}
-							className={clsx(
-								"btn-sm font-medium",
-								pendingAction === "approved" ? "btn-success" : "btn-danger",
-							)}>
-							{reviewMutation.isPending
-								? "Saving…"
-								: pendingAction === "approved"
-									? "Confirm Approve"
-									: "Confirm Reject"}
-						</button>
-					</div>
-				</div>
-			)}
-		</div>
-	);
-}
-
 function LeaveModal({
 	onClose,
 	onSuccess,
@@ -861,93 +530,30 @@ function LeaveModal({
 	onClose: () => void;
 	onSuccess: () => void;
 }) {
-	const { user } = useAuthStore();
-	const isAttachee = user?.role === "attachee";
-
 	const [form, setForm] = useState({
-		leave_type: isAttachee ? "sick" : "annual",
+		leave_type: "annual",
 		start_date: "",
 		end_date: "",
 		reason: "",
 	});
-	const [submitError, setSubmitError] = useState<string | null>(null);
-
 	const mutation = useMutation({
 		mutationFn: (data: any) => attendanceApi.submitLeave(data),
 		onSuccess: () => {
 			toast.success("Leave request submitted");
 			onSuccess();
 		},
-		onError: (e: any) => {
-			// Robustly extract the error message from various API response shapes
-			let msg = "Submission failed";
-			if (e.response?.data) {
-				const d = e.response.data;
-				if (typeof d === "string") {
-					msg = d;
-				} else if (d.detail) {
-					msg =
-						typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail);
-				} else if (d.message) {
-					msg = d.message;
-				} else if (d.non_field_errors) {
-					msg = Array.isArray(d.non_field_errors)
-						? d.non_field_errors.join(", ")
-						: d.non_field_errors;
-				} else {
-					// Collect field-level errors (e.g. { start_date: ["This field is required."] })
-					const fieldErrors = Object.entries(d)
-						.map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
-						.join(" | ");
-					if (fieldErrors) msg = fieldErrors;
-				}
-			} else if (e.message) {
-				msg = e.message;
-			}
-			setSubmitError(msg);
-			toast.error(msg);
-		},
+		onError: (e: any) =>
+			toast.error(e.response?.data?.detail || "Submission failed"),
 	});
-
-	// Calculate the number of days correctly:
-	// Both dates are inclusive, so end - start + 1 (but clamp to >= 1 only if both set)
+	const qc = useQueryClient();
 	const days =
 		form.start_date && form.end_date
-			? Math.max(
-					1,
-					Math.ceil(
-						(new Date(form.end_date).getTime() -
-							new Date(form.start_date).getTime()) /
-							86400000,
-					) + 1,
-				)
+			? Math.ceil(
+					(new Date(form.end_date).getTime() -
+						new Date(form.start_date).getTime()) /
+						86400000,
+				) + 1
 			: 0;
-
-	// Validate end_date >= start_date
-	const dateError =
-		form.start_date &&
-		form.end_date &&
-		new Date(form.end_date) < new Date(form.start_date)
-			? "End date cannot be before start date."
-			: null;
-
-	const canSubmit =
-		!mutation.isPending &&
-		!!form.reason.trim() &&
-		!!form.start_date &&
-		!!form.end_date &&
-		!dateError;
-
-	const handleSubmit = () => {
-		setSubmitError(null);
-		mutation.mutate({
-			leave_type: form.leave_type,
-			start_date: form.start_date,
-			end_date: form.end_date,
-			reason: form.reason.trim(),
-			days_requested: days,
-		});
-	};
 
 	return (
 		<div className="modal-backdrop" onClick={onClose}>
@@ -965,9 +571,7 @@ function LeaveModal({
 							}
 							className="select-input">
 							{[
-								...(!isAttachee
-									? [["annual", "Annual Leave"] as [string, string]]
-									: []),
+								["annual", "Annual Leave"],
 								["sick", "Sick Leave"],
 								["emergency", "Emergency Leave"],
 								["study", "Study Leave"],
@@ -996,7 +600,6 @@ function LeaveModal({
 							<input
 								type="date"
 								value={form.end_date}
-								min={form.start_date || undefined}
 								onChange={(e) =>
 									setForm((p) => ({ ...p, end_date: e.target.value }))
 								}
@@ -1004,19 +607,11 @@ function LeaveModal({
 							/>
 						</div>
 					</div>
-
-					{dateError && (
-						<div className="alert alert-error text-xs">
-							<AlertTriangle size={13} /> {dateError}
-						</div>
-					)}
-
-					{days > 0 && !dateError && (
+					{days > 0 && (
 						<div className="alert alert-info">
 							<span>{days} working day(s) requested</span>
 						</div>
 					)}
-
 					<div className="input-group">
 						<label className="input-label">Reason *</label>
 						<textarea
@@ -1028,22 +623,14 @@ function LeaveModal({
 							placeholder="Briefly explain your reason..."
 						/>
 					</div>
-
-					{/* Surface API error inline so the user knows exactly what went wrong */}
-					{submitError && (
-						<div className="alert alert-error text-xs flex items-start gap-2">
-							<AlertTriangle size={13} className="mt-0.5 shrink-0" />
-							<span>{submitError}</span>
-						</div>
-					)}
 				</div>
 				<div className="modal-footer">
 					<button onClick={onClose} className="btn-secondary">
 						Cancel
 					</button>
 					<button
-						onClick={handleSubmit}
-						disabled={!canSubmit}
+						onClick={() => mutation.mutate({ ...form, days_requested: days })}
+						disabled={mutation.isPending || !form.reason || !form.start_date}
 						className="btn-primary">
 						{mutation.isPending ? "Submitting..." : "Submit Request"}
 					</button>

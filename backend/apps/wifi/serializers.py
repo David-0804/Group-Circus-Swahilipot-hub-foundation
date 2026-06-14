@@ -41,3 +41,4 @@ class WifiGrantSerializer(serializers.ModelSerializer):
 
     def get_requested_by_name(self, obj):
         return self.get_requester_name(obj)
+    

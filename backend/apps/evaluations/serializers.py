@@ -3,7 +3,7 @@ from apps.tasks.models import Evaluation, EvaluationTemplate
 
 
 class EvaluationTemplateSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta:  # type: ignore
         model = EvaluationTemplate
         fields = [
             "id",
@@ -25,7 +25,7 @@ class EvaluationListSerializer(serializers.ModelSerializer):
         source="template.evaluation_type", read_only=True, default=None
     )
 
-    class Meta:
+    class Meta:  # type: ignore
         model = Evaluation
         fields = [
             "id",
@@ -57,7 +57,7 @@ class EvaluationListSerializer(serializers.ModelSerializer):
 class EvaluationCreateSerializer(serializers.ModelSerializer):
     """Used for POST /evaluations/ — evaluators only."""
 
-    class Meta:
+    class Meta:  # type: ignore
         model = Evaluation
         fields = [
             "id",
@@ -84,7 +84,7 @@ class EvaluationCreateSerializer(serializers.ModelSerializer):
 
 
 class EvaluationUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta:  # type: ignore
         model = Evaluation
         fields = [
             "scores",

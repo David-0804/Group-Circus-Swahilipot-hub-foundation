@@ -31,7 +31,7 @@ class FileTransfer(models.Model):
     expires_at = models.DateTimeField(default=default_expires_at)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ["-created_at"]
 
     @property

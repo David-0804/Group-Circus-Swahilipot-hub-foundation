@@ -55,3 +55,4 @@ class WifiGrant(models.Model):
 
     def __str__(self):
         return f"{self.requested_by} - {self.device_type} ({self.status})"
+    

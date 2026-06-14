@@ -33,7 +33,7 @@ class ShootBooking(models.Model):
     created_at       = models.DateTimeField(auto_now_add=True)
     updated_at       = models.DateTimeField(auto_now=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['-created_at']
 
     def __str__(self):
@@ -56,7 +56,7 @@ class Footage(models.Model):
     file_size_mb = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     created_at   = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['-created_at']
 
     def save(self, *args, **kwargs):

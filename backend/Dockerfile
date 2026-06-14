@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -14,8 +14,10 @@ RUN apt-get update && apt-get install -y \
 
 # Python deps
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY . . 
+
+RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000

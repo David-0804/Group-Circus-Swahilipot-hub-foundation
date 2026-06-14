@@ -46,6 +46,10 @@ app.conf.beat_schedule = {
         'task': 'Nexus.tasks.send_digest_emails',
         'schedule': crontab(minute=0),
     },
+    'auto-enforce-attendance-daily': {
+        'task': 'apps.attendance.tasks.auto_enforce_attendance',
+        'schedule': crontab(hour=9, minute=0),  # runs every day at 9:00 AM
+    },
 }
 
 app.conf.update(

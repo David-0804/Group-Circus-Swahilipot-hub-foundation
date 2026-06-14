@@ -6,7 +6,7 @@ class FileTransferSerializer(serializers.ModelSerializer):
     is_expired = serializers.ReadOnlyField()
     uploaded_by_name = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta:  # type: ignore
         model = FileTransfer
         fields = [
             "id",

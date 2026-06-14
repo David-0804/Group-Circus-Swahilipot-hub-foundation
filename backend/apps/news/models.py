@@ -46,7 +46,7 @@ class NewsStory(TimeStampedModel):
     view_count = models.IntegerField(default=0)
     word_count = models.IntegerField(default=0)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['-created_at']
         indexes = [models.Index(fields=['status', 'organisation']), models.Index(fields=['published_at'])]
 
@@ -73,7 +73,7 @@ class EditorialComment(TimeStampedModel):
     comment = models.TextField()
     is_resolved = models.BooleanField(default=False)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['created_at']
 
 
@@ -125,7 +125,7 @@ class RadioSlot(TimeStampedModel):
     reminder_2h_sent = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['start_datetime']
         indexes = [models.Index(fields=['start_datetime', 'frequency']), models.Index(fields=['presenter'])]
 
@@ -173,7 +173,7 @@ class SoftwareSubscription(TimeStampedModel):
     alert_7_sent = models.BooleanField(default=False)
     auto_renew = models.BooleanField(default=False)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['expiry_date']
 
     def __str__(self): return f"{self.software_name} — expires {self.expiry_date}"
@@ -200,7 +200,7 @@ class SeatAllocation(TimeStampedModel):
     revoked_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         unique_together = [['subscription', 'user']]
 
 
@@ -216,7 +216,7 @@ class SeatRequest(TimeStampedModel):
     reviewed_by = models.ForeignKey('accounts.User', null=True, blank=True, on_delete=models.SET_NULL, related_name='seat_reviews')
     rejection_reason = models.TextField(blank=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['-created_at']
 
 
@@ -228,7 +228,7 @@ class NewsStorySerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     category_colour = serializers.CharField(source='category.colour', read_only=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         model = NewsStory
         fields = '__all__'
         read_only_fields = ['author', 'word_count', 'view_count']
@@ -241,7 +241,7 @@ class RadioSlotSerializer(serializers.ModelSerializer):
     show_colour = serializers.CharField(source='show.colour', read_only=True)
     frequency_name = serializers.CharField(source='frequency.name', read_only=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         model = RadioSlot
         fields = '__all__'
 
@@ -252,7 +252,7 @@ class SoftwareSubscriptionSerializer(serializers.ModelSerializer):
     days_until_expiry = serializers.ReadOnlyField()
     seat_holders = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta:  # type: ignore
         model = SoftwareSubscription
         exclude = ['licence_key']  # Don't expose licence keys in list
 

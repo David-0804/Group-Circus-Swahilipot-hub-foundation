@@ -50,7 +50,6 @@ export default function VideographyPage() {
 		queryKey: ["videography-bookings"],
 		queryFn: () => videographyApi.bookings().then((r) => r.data),
 		refetchInterval: 60000,
-		staleTime: 0, // always treat cache as stale so invalidation triggers a refetch
 	});
 
 	const { data: footageRaw, isLoading: footageLoading } = useQuery({
@@ -335,12 +334,8 @@ export default function VideographyPage() {
 				<BookingModal
 					equipment={equipment}
 					onClose={() => setShowBookingModal(false)}
-					// ✅ FIX: receive the new booking and append it to the cache directly
-					onSuccess={(newBooking: any) => {
-						qc.setQueryData(["videography-bookings"], (old: any) => {
-							const current = Array.isArray(old) ? old : (old?.results ?? []);
-							return [...current, newBooking];
-						});
+					onSuccess={() => {
+						qc.invalidateQueries({ queryKey: ["videography-bookings"] });
 						setShowBookingModal(false);
 					}}
 				/>
@@ -365,18 +360,10 @@ export default function VideographyPage() {
 function BookingModal({ equipment, onClose, onSuccess }: any) {
 	const { register, handleSubmit } = useForm();
 	const mutation = useMutation({
-		mutationFn: (data: any) =>
-			videographyApi.create({
-				...data,
-				// ✅ FIX: coerce checkbox values to an array of numbers
-				equipment_list: data.equipment_list
-					? [data.equipment_list].flat().map(Number)
-					: [],
-			}),
-		// ✅ FIX: pass the created booking back up via onSuccess(data.data)
-		onSuccess: (data) => {
+		mutationFn: (data: any) => videographyApi.create(data),
+		onSuccess: () => {
 			toast.success("Shoot booking submitted!");
-			onSuccess(data.data);
+			onSuccess();
 		},
 		onError: (e: any) =>
 			toast.error(e.response?.data?.detail || "Booking failed"),

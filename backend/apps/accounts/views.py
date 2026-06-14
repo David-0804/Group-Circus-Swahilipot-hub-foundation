@@ -1,8 +1,11 @@
 """Nexus Accounts — Serializers, Views, JWT"""
+from typing import cast, TYPE_CHECKING
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers, generics, status, permissions
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -26,7 +29,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         data = super().validate(attrs)
-        user = self.user
+        user = cast(User, self.user)
         user.last_login = timezone.now()
         user.save(update_fields=['last_login'])
         data['user'] = UserProfileSerializer(user).data
@@ -39,9 +42,9 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class MFAVerifyView(APIView):
-    def post(self, request):
+    def post(self, request: Request):
         token = request.data.get('token')
-        user = request.user
+        user = cast(User, request.user)
         if user.verify_mfa(token):
             user.mfa_verified = True
             user.save(update_fields=['mfa_verified'])
@@ -50,7 +53,7 @@ class MFAVerifyView(APIView):
 
 
 class LogoutView(APIView):
-    def post(self, request):
+    def post(self, request: Request):
         try:
             refresh = request.data.get('refresh')
             if refresh:
@@ -79,6 +82,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'emergency_contact_name', 'emergency_contact_phone',
             'mfa_enabled', 'notification_email', 'notification_sms', 'notification_push',
             'date_joined', 'last_login', 'is_active',
+            # ── Accessibility ──────────────────────────────────────────────
+            'font_preference',
         ]
         read_only_fields = ['id', 'email', 'date_joined', 'last_login']
 
@@ -90,6 +95,50 @@ class UserProfileSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.profile_photo.url)
         return obj.profile_photo.url
 
+
+# ── Dedicated accessibility / preferences endpoint ────────────────────────────
+
+class UserPreferencesSerializer(serializers.ModelSerializer):
+    """Lightweight serializer — only fields the user can self-update."""
+
+    VALID_FONTS = {'default', 'dyslexic', 'mono', 'serif'}
+
+    font_preference = serializers.ChoiceField(
+        choices=['default', 'dyslexic', 'mono', 'serif'],
+        required=False,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            'font_preference',
+            'notification_email',
+            'notification_sms',
+            'notification_push',
+            'timezone_preference',
+        ]
+
+
+class UserPreferencesView(generics.RetrieveUpdateAPIView):
+    """
+    GET  /api/accounts/preferences/   → return current preferences
+    PATCH /api/accounts/preferences/  → update one or more preferences
+    """
+    serializer_class = UserPreferencesSerializer
+    http_method_names = ['get', 'patch', 'head', 'options']
+
+    def get_object(self):
+        return cast(User, self.request.user)
+
+    def perform_update(self, serializer):
+        # Only save the fields that were actually sent
+        serializer.save()
+
+    def patch(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 class UserListSerializer(serializers.ModelSerializer):
     full_name = serializers.ReadOnlyField()
@@ -118,7 +167,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        # organisation is injected by perform_create — not accepted from client
         user = User(**validated_data)
         user.set_password(password)
         user.save()
@@ -129,11 +177,10 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserProfileSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
-    def get_object(self):
-        return self.request.user
+    def get_object(self):  # type: ignore[override]
+        return cast(User, self.request.user)
 
     def perform_update(self, serializer):
-        # SerializerMethodField handles read; write the file manually here
         instance = serializer.save()
         photo = self.request.FILES.get("profile_photo")
         if photo:
@@ -144,8 +191,8 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 class UserListView(generics.ListCreateAPIView):
     serializer_class = UserListSerializer
 
-    def get_queryset(self):
-        user = self.request.user
+    def get_queryset(self):  # type: ignore[override]
+        user = cast(User, self.request.user)
         qs = User.objects.select_related('department', 'branch', 'organisation')
         if user.role == 'system_admin':
             qs = qs.filter(organisation=user.organisation)
@@ -158,32 +205,29 @@ class UserListView(generics.ListCreateAPIView):
         else:
             qs = qs.filter(id=user.id)
 
-        # Optional role filter from query param (e.g. ?role=attachee)
         role = self.request.query_params.get('role')
         if role:
             qs = qs.filter(role=role)
 
         return qs
 
-    def get_serializer_class(self):
+    def get_serializer_class(self):  # type: ignore[override]
         if self.request.method == 'POST':
             return UserCreateSerializer
         return UserListSerializer
 
     def perform_create(self, serializer):
-        # Always assign the organisation of the requesting user
-        serializer.save(organisation=self.request.user.organisation)
+        user = cast(User, self.request.user)
+        serializer.save(organisation=user.organisation)
 
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = UserProfileSerializer
 
-    def get_queryset(self):
-        return User.objects.filter(organisation=self.request.user.organisation)
+    def get_queryset(self):  # type: ignore[override]
+        user = cast(User, self.request.user)
+        return User.objects.filter(organisation=user.organisation)
 
     def perform_destroy(self, instance):
-        # Soft deactivate instead of hard delete
         instance.is_active = False
         instance.save(update_fields=['is_active'])
-
-        

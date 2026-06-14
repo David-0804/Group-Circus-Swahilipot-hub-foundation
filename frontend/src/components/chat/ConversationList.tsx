@@ -1,9 +1,16 @@
 // ConversationList — Left sidebar listing groups and direct messages
 import { useState } from "react";
-import { Plus, Search, Hash, ChevronDown, ChevronRight } from "lucide-react";
-import { useChatStore, type Conversation } from  "../../stores/chatStore"
-;
+import {
+	Plus,
+	Search,
+	Hash,
+	ChevronDown,
+	ChevronRight,
+	Loader2,
+} from "lucide-react";
+import { useChatStore, type Conversation } from "../../stores/chatStore";
 import { useAuthStore } from "../../services/api";
+import { useChatApi } from "../../hooks/useChatApi";
 import clsx from "clsx";
 
 const DEMO_ONLINE_USERS = [
@@ -68,12 +75,13 @@ export function ConversationList({ canCreateGroup, onCreateGroup }: Props) {
 		conversations,
 		activeConversationId,
 		setActiveConversation,
-		getOrCreateConversation,
 		markConversationRead,
 		onlineUsers,
 		activeTab,
 		setActiveTab,
 	} = useChatStore();
+
+	const { startDM } = useChatApi();
 
 	const [search, setSearch] = useState("");
 	const [groupsOpen, setGroupsOpen] = useState(true);
@@ -99,18 +107,7 @@ export function ConversationList({ canCreateGroup, onCreateGroup }: Props) {
 	};
 
 	const handleStartDM = (targetUser: (typeof DEMO_ONLINE_USERS)[0]) => {
-		if (!user) return;
-		const currentParticipant = {
-			id: user.id,
-			name: user.full_name,
-			role: user.role_display,
-			department: user.department_name || undefined,
-			email: user.email,
-			isOnline: true,
-		};
-		const convId = getOrCreateConversation(currentParticipant, targetUser);
-		setActiveConversation(convId);
-		markConversationRead(convId);
+		startDM(targetUser.id);
 	};
 
 	const formatTime = (iso?: string) => {

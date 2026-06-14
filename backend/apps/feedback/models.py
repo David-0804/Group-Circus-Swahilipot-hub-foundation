@@ -52,7 +52,7 @@ class FeedbackTicket(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ["-created_at"]
 
     def save(self, *args, **kwargs):

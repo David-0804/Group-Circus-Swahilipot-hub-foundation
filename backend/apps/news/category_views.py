@@ -6,7 +6,7 @@ from .models import RadioSlotSerializer, SoftwareSubscriptionSerializer
 
 
 class NewsCategorySerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta:  # type: ignore
         model = NewsCategory
         fields = '__all__'
 
@@ -22,7 +22,7 @@ class NewsCategoryView(generics.ListCreateAPIView):
 
 
 class RadioFrequencySerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta:  # type: ignore
         model = RadioFrequency
         fields = '__all__'
 
@@ -38,7 +38,7 @@ class RadioFrequencyView(generics.ListCreateAPIView):
 
 
 class RadioShowSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta:  # type: ignore
         model = RadioShow
         fields = '__all__'
 
@@ -67,7 +67,7 @@ class SeatRequestSerializer(serializers.ModelSerializer):
     requested_by_name = serializers.CharField(source='requested_by.full_name', read_only=True)
     subscription_name = serializers.CharField(source='subscription.software_name', read_only=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         model = SeatRequest
         fields = '__all__'
         read_only_fields = ['requested_by', 'status']

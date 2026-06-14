@@ -15,7 +15,7 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.full_name', read_only=True)
     is_checked_in = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta:  # type: ignore
         model = AttendanceRecord
         fields = '__all__'
 
@@ -38,7 +38,7 @@ class CheckOutSerializer(serializers.Serializer):
 class LeaveSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.full_name', read_only=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         model = LeaveRequest
         fields = '__all__'
         read_only_fields = ['user', 'reviewed_by', 'reviewed_at']

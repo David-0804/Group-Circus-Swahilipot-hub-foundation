@@ -1,21 +1,33 @@
-// Nexus — Wi-Fi Access Management
+// Nexus - Wi-Fi Access Management
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
-import { Wifi, Plus, Clock, CheckCircle, XCircle, Trash2 } from "lucide-react";
-import { wifiApi } from "../../services/api";
-import { useAuthStore } from "../../services/api";
+import { Wifi, Plus, CheckCircle, XCircle, Trash2 } from "lucide-react";
+import { wifiApi, useAuthStore } from "../../services/api";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 
-// ── Wi-Fi Request Modal ────────────────────────────────────────────────────
-function WifiRequestModal({
-	onClose,
-	user,
-}: {
-	onClose: () => void;
-	user: any;
-}) {
+// Parses any DRF error shape and returns a human-readable string
+function parseDrfError(e: any): string {
+	const data = e?.response?.data;
+	if (!data) return "Network error - please try again";
+	if (typeof data === "string") return data;
+	if (data.detail) return data.detail;
+	if (data.non_field_errors)
+		return (data.non_field_errors as string[]).join(" ");
+	// Field-level errors: { mac_address: ["Enter a valid MAC address."], ... }
+	const messages = Object.entries(data)
+		.map(([field, errs]) => {
+			const label = field.replace(/_/g, " ");
+			const msg = Array.isArray(errs) ? errs.join(" ") : String(errs);
+			return `${label}: ${msg}`;
+		})
+		.join("\n");
+	return messages || "Failed to submit request";
+}
+
+// Wi-Fi Request Modal
+function WifiRequestModal({ onClose }: { onClose: () => void }) {
 	const qc = useQueryClient();
 	const [form, setForm] = useState({
 		device_type: "laptop",
@@ -23,13 +35,13 @@ function WifiRequestModal({
 		purpose: "",
 		duration_days: 30,
 	});
+	const [errors, setErrors] = useState<Record<string, string>>({});
 
 	const mutation = useMutation({
 		mutationFn: (data: any) => wifiApi.request(data),
 		onSuccess: (response) => {
-			// Optimistically insert the new grant into the cache immediately
-			// so the table updates before the background refetch completes.
 			const newGrant = response.data;
+			// Insert new grant into cache immediately so table updates without waiting for refetch
 			qc.setQueryData(["wifi-grants"], (old: any) => {
 				const existing = Array.isArray(old)
 					? old
@@ -37,21 +49,46 @@ function WifiRequestModal({
 						? old.results
 						: [];
 				const merged = [newGrant, ...existing];
-				// Preserve paginated shape if the API returns { results, count, ... }
 				return Array.isArray(old) ? merged : { ...old, results: merged };
 			});
-			// Also kick off a background refetch to sync with server truth
+			// Background sync with server
 			qc.invalidateQueries({ queryKey: ["wifi-grants"] });
 			toast.success("Wi-Fi access request submitted!");
 			onClose();
 		},
-		onError: (e: any) =>
-			toast.error(e.response?.data?.detail || "Failed to submit request"),
+		onError: (e: any) => {
+			const data = e?.response?.data;
+			// Show field-level errors inline if present
+			if (
+				data &&
+				typeof data === "object" &&
+				!data.detail &&
+				!data.non_field_errors
+			) {
+				const fieldErrors: Record<string, string> = {};
+				Object.entries(data).forEach(([field, errs]) => {
+					fieldErrors[field] = Array.isArray(errs)
+						? errs.join(" ")
+						: String(errs);
+				});
+				setErrors(fieldErrors);
+				toast.error("Please fix the errors below");
+			} else {
+				toast.error(parseDrfError(e));
+			}
+		},
 	});
 
 	const handleSubmit = () => {
-		if (!form.purpose.trim()) return;
-		mutation.mutate(form);
+		setErrors({});
+		if (!form.purpose.trim()) {
+			setErrors({ purpose: "This field is required." });
+			return;
+		}
+		// Omit mac_address entirely when blank - sending "" fails backend MAC format validators
+		const payload: any = { ...form };
+		if (!payload.mac_address.trim()) delete payload.mac_address;
+		mutation.mutate(payload);
 	};
 
 	return (
@@ -77,18 +114,30 @@ function WifiRequestModal({
 							<option value="tablet">Tablet</option>
 							<option value="other">Other</option>
 						</select>
+						{errors.device_type && (
+							<p className="input-error">{errors.device_type}</p>
+						)}
 					</div>
 					<div className="input-group">
-						<label className="input-label">MAC Address</label>
+						<label className="input-label">
+							MAC Address{" "}
+							<span className="text-slate-500 text-xs">(optional)</span>
+						</label>
 						<input
 							type="text"
 							value={form.mac_address}
 							onChange={(e) =>
 								setForm({ ...form, mac_address: e.target.value })
 							}
-							className="input"
+							className={clsx(
+								"input",
+								errors.mac_address && "input-error-border",
+							)}
 							placeholder="e.g. AA:BB:CC:DD:EE:FF"
 						/>
+						{errors.mac_address && (
+							<p className="input-error">{errors.mac_address}</p>
+						)}
 					</div>
 					<div className="input-group">
 						<label className="input-label">Duration (days)</label>
@@ -102,6 +151,9 @@ function WifiRequestModal({
 							}
 							className="input"
 						/>
+						{errors.duration_days && (
+							<p className="input-error">{errors.duration_days}</p>
+						)}
 					</div>
 					<div className="input-group">
 						<label className="input-label">Purpose *</label>
@@ -109,9 +161,13 @@ function WifiRequestModal({
 							value={form.purpose}
 							onChange={(e) => setForm({ ...form, purpose: e.target.value })}
 							rows={3}
-							className="textarea"
+							className={clsx(
+								"textarea",
+								errors.purpose && "input-error-border",
+							)}
 							placeholder="Explain why you need Wi-Fi access..."
 						/>
+						{errors.purpose && <p className="input-error">{errors.purpose}</p>}
 					</div>
 				</div>
 				<div className="modal-footer">
@@ -130,7 +186,7 @@ function WifiRequestModal({
 	);
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────
+// Main Page
 export default function WifiPage() {
 	const { user } = useAuthStore();
 	const qc = useQueryClient();
@@ -158,7 +214,7 @@ export default function WifiPage() {
 			qc.invalidateQueries({ queryKey: ["wifi-grants"] });
 			toast.success("Wi-Fi request updated");
 		},
-		onError: (e: any) => toast.error(e.response?.data?.detail || "Failed"),
+		onError: (e: any) => toast.error(parseDrfError(e)),
 	});
 
 	const revokeMutation = useMutation({
@@ -167,8 +223,7 @@ export default function WifiPage() {
 			qc.invalidateQueries({ queryKey: ["wifi-grants"] });
 			toast.success("Access revoked");
 		},
-		onError: (e: any) =>
-			toast.error(e.response?.data?.detail || "Failed to revoke"),
+		onError: (e: any) => toast.error(parseDrfError(e)),
 	});
 
 	const active = grants.filter((g: any) => g.status === "approved");
@@ -244,13 +299,13 @@ export default function WifiPage() {
 								grants.map((g: any) => (
 									<tr key={g.id}>
 										<td className="text-white font-medium text-sm">
-											{g.requester_name || g.requested_by_name || "—"}
+											{g.requester_name || g.requested_by_name || "-"}
 										</td>
 										<td className="text-slate-300 text-sm capitalize">
 											{g.device_type}
 										</td>
 										<td className="font-mono text-xs text-slate-400">
-											{g.mac_address || "—"}
+											{g.mac_address || "-"}
 										</td>
 										<td className="text-slate-400 text-sm max-w-xs truncate">
 											{g.purpose}
@@ -320,10 +375,7 @@ export default function WifiPage() {
 			</div>
 
 			{showRequestModal && (
-				<WifiRequestModal
-					onClose={() => setShowRequestModal(false)}
-					user={user}
-				/>
+				<WifiRequestModal onClose={() => setShowRequestModal(false)} />
 			)}
 		</div>
 	);

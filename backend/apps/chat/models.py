@@ -1,160 +1,71 @@
 """
-Nexus Chat — Database Models
-Covers: Conversations, Messages, Media, Presence, Calls, Audit Logs
+apps/chat/models.py
 """
 import uuid
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
-AUTH_USER_MODEL = settings.AUTH_USER_MODEL
-
-
-# ── Conversation ──────────────────────────────────────────────────────────────
 
 class Conversation(models.Model):
-    TYPES = [("direct", "Direct Message"), ("group", "Group Chat")]
+    TYPE_CHOICES = [("direct", "Direct"), ("group", "Group")]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    type = models.CharField(max_length=10, choices=TYPES, default="direct")
-
-    # Group-only fields
-    name = models.CharField(max_length=100, blank=True)
-    description = models.TextField(blank=True)
-    avatar = models.ImageField(upload_to="chat/avatars/", null=True, blank=True)
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    name = models.CharField(max_length=150, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(
-        AUTH_USER_MODEL,
+        settings.AUTH_USER_MODEL,
         null=True, blank=True,
         on_delete=models.SET_NULL,
         related_name="created_conversations",
     )
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-updated_at"]
+        app_label = "chat"
 
     def __str__(self):
-        if self.type == "group":
-            return f"#{self.name}"
-        participants = self.participants.select_related("user").all()
-        names = ", ".join(p.user.get_full_name() for p in participants[:2])
-        return f"DM: {names}"
+        return self.name or f"DM:{self.id}"
 
     def get_unread_count(self, user):
-        """Messages in this conversation that the user hasn't read yet."""
-        last_read = self.participants.filter(user=user).values_list(
-            "last_read_at", flat=True
-        ).first()
-        qs = self.messages.filter(is_deleted=False).exclude(sender=user)
-        if last_read:
-            qs = qs.filter(created_at__gt=last_read)
-        return qs.count()
-
-    def get_last_message(self):
-        return self.messages.filter(is_deleted=False).order_by("-created_at").first()
+        member = self.members.filter(user=user).first()
+        if not member:
+            return 0
+        cutoff = member.last_read_at
+        if not cutoff:
+            return self.messages.exclude(sender=user).count()
+        return self.messages.filter(
+            created_at__gt=cutoff
+        ).exclude(sender=user).count()
 
 
-class ConversationParticipant(models.Model):
-    """Through-table: user ↔ conversation with per-user metadata."""
+class ConversationMember(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     conversation = models.ForeignKey(
-        Conversation, on_delete=models.CASCADE, related_name="participants"
+        Conversation, on_delete=models.CASCADE, related_name="members"
     )
     user = models.ForeignKey(
-        AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="chat_participations"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="chat_memberships",
     )
     joined_at = models.DateTimeField(auto_now_add=True)
     last_read_at = models.DateTimeField(null=True, blank=True)
-    is_admin = models.BooleanField(default=False)  # group admin
-    left_at = models.DateTimeField(null=True, blank=True)  # set on leave
+    is_admin = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = [["conversation", "user"]]
+        unique_together = ("conversation", "user")
+        app_label = "chat"
 
     def __str__(self):
-        return f"{self.user.get_full_name()} in {self.conversation}"
+        return f"{self.user} in {self.conversation}"
 
-    @property
-    def is_active(self):
-        return self.left_at is None
-
-
-# ── Message ───────────────────────────────────────────────────────────────────
-
-class Message(models.Model):
-    STATUS = [
-        ("sending", "Sending"),
-        ("sent", "Sent"),
-        ("delivered", "Delivered"),
-        ("seen", "Seen"),
-    ]
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    conversation = models.ForeignKey(
-        Conversation, on_delete=models.CASCADE, related_name="messages"
-    )
-    sender = models.ForeignKey(
-        AUTH_USER_MODEL,
-        null=True, blank=True,  # null for system messages
-        on_delete=models.SET_NULL,
-        related_name="sent_messages",
-    )
-    # For system messages we need a display name even without a real sender
-    sender_name_override = models.CharField(max_length=100, blank=True)
-
-    content = models.TextField(blank=True)
-    status = models.CharField(max_length=10, choices=STATUS, default="sent")
-
-    # Threading
-    reply_to = models.ForeignKey(
-        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="replies"
-    )
-    is_system = models.BooleanField(default=False)
-    is_deleted = models.BooleanField(default=False)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["created_at"]
-
-    def __str__(self):
-        sender = self.sender.get_full_name() if self.sender else "System"
-        return f"{sender}: {self.content[:60]}"
-
-    @property
-    def sender_name(self):
-        if self.sender_name_override:
-            return self.sender_name_override
-        return self.sender.get_full_name() if self.sender else "System"
-
-
-class MessageStatus(models.Model):
-    """Per-recipient delivery/read status for each message."""
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    message = models.ForeignKey(
-        Message, on_delete=models.CASCADE, related_name="delivery_statuses"
-    )
-    recipient = models.ForeignKey(
-        AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="message_statuses"
-    )
-    status = models.CharField(
-        max_length=10,
-        choices=Message.STATUS,
-        default="sent",
-    )
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = [["message", "recipient"]]
-
-
-# ── Media ─────────────────────────────────────────────────────────────────────
 
 class ChatMedia(models.Model):
-    MEDIA_TYPES = [
+    TYPE_CHOICES = [
         ("image", "Image"),
         ("video", "Video"),
         ("audio", "Audio"),
@@ -162,59 +73,29 @@ class ChatMedia(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    message = models.ForeignKey(
-        Message, on_delete=models.CASCADE, related_name="media", null=True, blank=True
-    )
     conversation = models.ForeignKey(
-        Conversation, on_delete=models.CASCADE, related_name="shared_media"
+        Conversation, on_delete=models.CASCADE, related_name="media_files"
     )
     uploaded_by = models.ForeignKey(
-        AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="chat_uploads"
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True
     )
     file = models.FileField(upload_to="chat/media/%Y/%m/")
-    thumbnail = models.ImageField(upload_to="chat/thumbs/", null=True, blank=True)
-    media_type = models.CharField(max_length=10, choices=MEDIA_TYPES)
-    name = models.CharField(max_length=255)
-    size = models.PositiveBigIntegerField(default=0)  # bytes
+    original_name = models.CharField(max_length=255)
+    media_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
     mime_type = models.CharField(max_length=100, blank=True)
+    size = models.PositiveBigIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        app_label = "chat"
 
     def __str__(self):
-        return f"{self.name} ({self.media_type})"
+        return f"{self.media_type}:{self.original_name}"
 
-
-# ── Presence ──────────────────────────────────────────────────────────────────
-
-class UserPresence(models.Model):
-    STATUS = [
-        ("online", "Online"),
-        ("away", "Away"),
-        ("offline", "Offline"),
-    ]
-
-    user = models.OneToOneField(
-        AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="presence"
-    )
-    status = models.CharField(max_length=10, choices=STATUS, default="offline")
-    last_seen = models.DateTimeField(null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.user.get_full_name()} — {self.status}"
-
-    @property
-    def is_online(self):
-        return self.status == "online"
-
-
-# ── Calls ─────────────────────────────────────────────────────────────────────
 
 class Call(models.Model):
-    CALL_TYPES = [("voice", "Voice"), ("video", "Video")]
-    CALL_STATUS = [
+    TYPE_CHOICES = [("voice", "Voice"), ("video", "Video")]
+    STATUS_CHOICES = [
         ("ringing", "Ringing"),
         ("connected", "Connected"),
         ("ended", "Ended"),
@@ -227,56 +108,126 @@ class Call(models.Model):
         Conversation, on_delete=models.CASCADE, related_name="calls"
     )
     initiator = models.ForeignKey(
-        AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="initiated_calls"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="initiated_calls",
     )
     recipient = models.ForeignKey(
-        AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="received_calls"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="received_calls",
     )
-    call_type = models.CharField(max_length=5, choices=CALL_TYPES)
-    status = models.CharField(max_length=10, choices=CALL_STATUS, default="ringing")
+    call_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="ringing")
     started_at = models.DateTimeField(auto_now_add=True)
+    connected_at = models.DateTimeField(null=True, blank=True)
     ended_at = models.DateTimeField(null=True, blank=True)
-    duration = models.PositiveIntegerField(null=True, blank=True)  # seconds
-    # Link to the message bubble that was created for this call
-    message = models.OneToOneField(
-        Message, null=True, blank=True, on_delete=models.SET_NULL, related_name="call"
-    )
+    duration = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
-        ordering = ["-started_at"]
+        app_label = "chat"
 
     def __str__(self):
-        return f"{self.call_type} call: {self.initiator} → {self.recipient} ({self.status})"
+        return f"{self.call_type} {self.initiator} → {self.recipient} [{self.status}]"
 
 
-# ── Chat Audit Log ─────────────────────────────────────────────────────────────
-
-class ChatAuditLog(models.Model):
-    ACTIONS = [
-        ("group_created", "Group Created"),
-        ("group_creation_denied", "Group Creation Denied"),
-        ("member_added", "Member Added"),
-        ("member_removed", "Member Removed"),
-        ("group_updated", "Group Updated"),
-        ("message_deleted", "Message Deleted"),
+class Message(models.Model):
+    STATUS_CHOICES = [
+        ("sending", "Sending"),
+        ("sent", "Sent"),
+        ("delivered", "Delivered"),
+        ("seen", "Seen"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    action = models.CharField(max_length=30, choices=ACTIONS)
-    performed_by = models.ForeignKey(
-        AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="chat_audit_logs"
-    )
     conversation = models.ForeignKey(
-        Conversation, null=True, blank=True, on_delete=models.SET_NULL, related_name="audit_logs"
+        Conversation, on_delete=models.CASCADE, related_name="messages"
     )
-    group_name = models.CharField(max_length=100, blank=True)
-    reason = models.TextField(blank=True)
-    extra = models.JSONField(default=dict, blank=True)
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="sent_chat_messages",
+    )
+    content = models.TextField(blank=True)
+    media = models.ManyToManyField(ChatMedia, blank=True, related_name="messages")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="sent")
+    is_system = models.BooleanField(default=False)
+    call_record = models.OneToOneField(
+        Call,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="message",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        app_label = "chat"
+
+    def __str__(self):
+        return f"Msg({self.sender_id}) in {self.conversation_id}"
+
+
+class MessageReceipt(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    message = models.ForeignKey(
+        Message, on_delete=models.CASCADE, related_name="receipts"
+    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    seen_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ("message", "user")
+        app_label = "chat"
+
+
+class UserPresence(models.Model):
+    STATUS_CHOICES = [
+        ("online", "Online"),
+        ("away", "Away"),
+        ("offline", "Offline"),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="presence",
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="offline")
+    last_seen = models.DateTimeField(auto_now=True)
+    # updated_at mirrors last_seen — needed because the DB table already has this column
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        app_label = "chat"
+
+    def __str__(self):
+        return f"{self.user}: {self.status}"
+
+
+class GroupAuditLog(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    action = models.CharField(max_length=50)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True
+    )
+    actor_role = models.CharField(max_length=50, blank=True)
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    group_name = models.CharField(max_length=150, blank=True)
+    success = models.BooleanField(default=False)
+    detail = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
+        app_label = "chat"
 
     def __str__(self):
-        actor = self.performed_by.get_full_name() if self.performed_by else "Unknown"
-        return f"{actor} — {self.action} @ {self.created_at:%Y-%m-%d %H:%M}"
+        return f"{self.action} by {self.actor_id} – {'OK' if self.success else 'DENIED'}"

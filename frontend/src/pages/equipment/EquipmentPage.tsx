@@ -128,7 +128,6 @@ export default function EquipmentPage() {
 			);
 		},
 		onError: (e: any) => {
-			console.log(e.response?.data);
 
 			const detail = e.response?.data?.detail;
 
@@ -586,17 +585,6 @@ export default function EquipmentPage() {
 				</div>
 			)}
 
-			{/* Detail Modal */}
-			{showDetailModal && selectedItem && (
-				<DetailModal
-					item={selectedItem}
-					onClose={() => {
-						setShowDetailModal(false);
-						setSelectedItem(null);
-					}}
-				/>
-			)}
-
 			{/* Checkout Request Modal */}
 			{showCheckoutModal && selectedItem && (
 				<CheckoutModal
@@ -648,117 +636,6 @@ export default function EquipmentPage() {
 
 // ── Modal Components ──────────────────────────────────────────────────────
 
-function DetailModal({ item, onClose }: any) {
-	return (
-		<div className="modal-backdrop" onClick={onClose}>
-			<div className="modal-box max-w-2xl" onClick={(e) => e.stopPropagation()}>
-				<div className="modal-header">
-					<h3 className="font-semibold text-white flex items-center gap-2">
-						<Package size={18} className="text-Nexus-400" />
-						{item.name}
-					</h3>
-				</div>
-				<div className="modal-body space-y-4">
-					<div className="grid grid-cols-2 gap-4 text-sm">
-						<div>
-							<p className="text-slate-500 mb-1">Asset Tag</p>
-							<p className="font-mono text-Nexus-400">{item.asset_tag}</p>
-						</div>
-						<div>
-							<p className="text-slate-500 mb-1">Category</p>
-							<p className="text-white">{item.category_name || "—"}</p>
-						</div>
-						<div>
-							<p className="text-slate-500 mb-1">Make / Model</p>
-							<p className="text-white">
-								{[item.make, item.model].filter(Boolean).join(" ") || "—"}
-							</p>
-						</div>
-						<div>
-							<p className="text-slate-500 mb-1">Serial Number</p>
-							<p className="text-white font-mono">
-								{item.serial_number || "—"}
-							</p>
-						</div>
-						<div>
-							<p className="text-slate-500 mb-1">Condition</p>
-							<p
-								className={clsx(
-									"font-medium capitalize",
-									CONDITION_STYLES[item.condition] || "text-slate-400",
-								)}>
-								{item.condition}
-							</p>
-						</div>
-						<div>
-							<p className="text-slate-500 mb-1">Status</p>
-							<span
-								className={clsx(
-									"badge capitalize",
-									STATUS_STYLES[item.status] || "badge-slate",
-								)}>
-								{item.status?.replace("_", " ")}
-							</span>
-						</div>
-						<div>
-							<p className="text-slate-500 mb-1">Storage Location</p>
-							<p className="text-white">{item.location || "—"}</p>
-						</div>
-						<div>
-							<p className="text-slate-500 mb-1">Purchase Date</p>
-							<p className="text-white">
-								{item.purchase_date
-									? format(new Date(item.purchase_date), "dd MMM yyyy")
-									: "—"}
-							</p>
-						</div>
-						<div>
-							<p className="text-slate-500 mb-1">Purchase Cost</p>
-							<p className="text-white">
-								{item.purchase_cost ? `KES ${item.purchase_cost}` : "—"}
-							</p>
-						</div>
-						<div>
-							<p className="text-slate-500 mb-1">Current Borrower</p>
-							<p className="text-white">{item.current_borrower?.name || "—"}</p>
-						</div>
-						{item.due_return_date && (
-							<div>
-								<p className="text-slate-500 mb-1">Due Return</p>
-								<p
-									className={clsx({
-										"text-red-400": new Date(item.due_return_date) < new Date(),
-										"text-amber-400":
-											new Date(item.due_return_date) <=
-											new Date(Date.now() + 2 * 86400000),
-										"text-white":
-											new Date(item.due_return_date) >
-											new Date(Date.now() + 2 * 86400000),
-									})}>
-									{format(new Date(item.due_return_date), "dd MMM yyyy")}
-								</p>
-							</div>
-						)}
-					</div>
-					{item.description && (
-						<div>
-							<p className="text-slate-500 mb-1 text-sm">Notes</p>
-							<p className="text-slate-300 text-sm leading-relaxed">
-								{item.description}
-							</p>
-						</div>
-					)}
-				</div>
-				<div className="modal-footer">
-					<button onClick={onClose} className="btn-secondary">
-						Close
-					</button>
-				</div>
-			</div>
-		</div>
-	);
-}
-
 function CheckoutModal({ item, onClose, onSuccess }: any) {
 	const {
 		register,
@@ -773,8 +650,6 @@ function CheckoutModal({ item, onClose, onSuccess }: any) {
 			onSuccess();
 		},
 		onError: (e: any) => {
-			console.log(e.response?.data);
-
 			const detail = e.response?.data?.detail;
 
 			const message =
@@ -875,7 +750,6 @@ function AddEquipmentModal({ categories, onClose, onSuccess }: any) {
 			onSuccess();
 		},
 		onError: (e: any) => {
-			console.log(e.response?.data);
 
 			const detail = e.response?.data?.detail;
 

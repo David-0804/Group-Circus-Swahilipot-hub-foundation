@@ -39,7 +39,7 @@ class Task(TimeStampedModel):
     overdue_alert_sent = models.BooleanField(default=False)
     tags               = models.JSONField(default=list)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['assigned_to', 'status']),
@@ -102,7 +102,7 @@ class LogbookEntry(TimeStampedModel):
     reviewed_at           = models.DateTimeField(null=True, blank=True)
     attachments           = models.FileField(upload_to='logbooks/attachments/', null=True, blank=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         unique_together = [['logbook', 'date']]
         ordering = ['-date']
 
@@ -141,7 +141,7 @@ class Evaluation(TimeStampedModel):
     attachee_acknowledged = models.BooleanField(default=False)
     attachee_comments    = models.TextField(blank=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['-created_at']
 
 
@@ -173,7 +173,7 @@ class Certificate(TimeStampedModel):
     qr_verification_code = models.CharField(max_length=100, unique=True)
     verification_url   = models.URLField(blank=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['-created_at']
 
     def __str__(self):
@@ -206,7 +206,7 @@ class AchievementBadge(TimeStampedModel):
     reason       = models.TextField(blank=True)
     awarded_at   = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         ordering = ['-awarded_at']
 
 
@@ -217,7 +217,7 @@ class TaskSerializer(serializers.ModelSerializer):
     assigned_by_name = serializers.CharField(source='assigned_by.full_name', read_only=True)
     is_overdue       = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta:  # type: ignore
         model  = Task
         fields = '__all__'
         read_only_fields = ['assigned_by', 'organisation']
@@ -229,7 +229,7 @@ class TaskSerializer(serializers.ModelSerializer):
 class LogbookEntrySerializer(serializers.ModelSerializer):
     reviewed_by_name = serializers.CharField(source='reviewed_by.full_name', read_only=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         model  = LogbookEntry
         fields = '__all__'
 
@@ -238,7 +238,7 @@ class EvaluationSerializer(serializers.ModelSerializer):
     attachee_name  = serializers.CharField(source='attachee.full_name',  read_only=True)
     evaluator_name = serializers.CharField(source='evaluator.full_name', read_only=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         model  = Evaluation
         fields = '__all__'
 
@@ -246,7 +246,7 @@ class EvaluationSerializer(serializers.ModelSerializer):
 class CertificateSerializer(serializers.ModelSerializer):
     recipient_name = serializers.CharField(source='recipient.full_name', read_only=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         model  = Certificate
         fields = '__all__'
 

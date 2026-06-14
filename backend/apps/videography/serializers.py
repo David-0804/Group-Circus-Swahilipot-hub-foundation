@@ -12,7 +12,7 @@ class ShootBookingSerializer(serializers.ModelSerializer):
         required=False,
     )
 
-    class Meta:
+    class Meta:  # type: ignore
         model  = ShootBooking
         fields = [
             'id', 'title', 'requested_by', 'requested_by_name',
@@ -43,7 +43,7 @@ class ShootBookingSerializer(serializers.ModelSerializer):
 
 
 class FootageSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta:  # type: ignore
         model  = Footage
         fields = [
             'id', 'booking', 'uploaded_by', 'title',

@@ -1,54 +1,37 @@
-"""Nexus Chat — URL Configuration"""
+"""
+apps/chat/urls.py
+Mounted at: api/v1/chat/   (already in your Nexus/urls.py)
+"""
 from django.urls import path
-from .views import (
-    ConversationListView,
-    ConversationDetailView,
-    CreateDirectConversationView,
-    CreateGroupConversationView,
-    UpdateGroupView,
-    LeaveGroupView,
-    MessageListView,
-    MarkReadView,
-    UpdateMessageStatusView,
-    MediaUploadView,
-    SharedMediaView,
-    OnlineUsersView,
-    UpdatePresenceView,
-    InitiateCallView,
-    EndCallView,
-    CallHistoryView,
-    UnreadCountView,
-    AuditLogView,
-)
+from . import views
 
 urlpatterns = [
-    # ── Conversations ────────────────────────────────────────────────────────
-    path("conversations/",                          ConversationListView.as_view(),         name="chat-conversation-list"),
-    path("conversations/direct/",                   CreateDirectConversationView.as_view(),  name="chat-direct-create"),
-    path("conversations/groups/",                   CreateGroupConversationView.as_view(),   name="chat-group-create"),
-    path("conversations/<uuid:pk>/",                ConversationDetailView.as_view(),        name="chat-conversation-detail"),
-    path("conversations/<uuid:pk>/update/",         UpdateGroupView.as_view(),               name="chat-group-update"),
-    path("conversations/<uuid:pk>/leave/",          LeaveGroupView.as_view(),                name="chat-group-leave"),
+    # Conversations
+    path("conversations/", views.ConversationListView.as_view(), name="chat-conversations"),
+    path("conversations/direct/", views.CreateDirectConversationView.as_view(), name="chat-create-direct"),
+    path("conversations/groups/", views.CreateGroupConversationView.as_view(), name="chat-create-group"),
+    path("conversations/<uuid:conv_id>/", views.ConversationDetailView.as_view(), name="chat-conversation-detail"),
+    path("conversations/<uuid:conv_id>/leave/", views.LeaveConversationView.as_view(), name="chat-leave"),
+    path("conversations/<uuid:conv_id>/messages/", views.MessageListView.as_view(), name="chat-messages"),
+    path("conversations/<uuid:conv_id>/read/", views.MarkReadView.as_view(), name="chat-mark-read"),
+    path("conversations/<uuid:conv_id>/media/", views.SharedMediaView.as_view(), name="chat-shared-media"),
+    path("conversations/<uuid:conv_id>/calls/", views.CallHistoryView.as_view(), name="chat-call-history"),
 
-    # ── Messages ─────────────────────────────────────────────────────────────
-    path("conversations/<uuid:pk>/messages/",       MessageListView.as_view(),               name="chat-message-list"),
-    path("conversations/<uuid:pk>/read/",           MarkReadView.as_view(),                  name="chat-mark-read"),
-    path("messages/<uuid:pk>/",                     UpdateMessageStatusView.as_view(),       name="chat-message-status"),
+    # Messages
+    path("messages/<uuid:msg_id>/", views.UpdateMessageStatusView.as_view(), name="chat-message-status"),
 
-    # ── Media ────────────────────────────────────────────────────────────────
-    path("media/",                                  MediaUploadView.as_view(),               name="chat-media-upload"),
-    path("conversations/<uuid:pk>/media/",          SharedMediaView.as_view(),               name="chat-shared-media"),
+    # Media upload
+    path("media/", views.UploadMediaView.as_view(), name="chat-upload-media"),
 
-    # ── Presence ─────────────────────────────────────────────────────────────
-    path("presence/online/",                        OnlineUsersView.as_view(),               name="chat-online-users"),
-    path("presence/",                               UpdatePresenceView.as_view(),             name="chat-presence-update"),
+    # Presence
+    path("presence/online/", views.OnlineUsersView.as_view(), name="chat-online-users"),
+    path("presence/", views.UpdatePresenceView.as_view(), name="chat-update-presence"),
 
-    # ── Calls ────────────────────────────────────────────────────────────────
-    path("calls/",                                  InitiateCallView.as_view(),              name="chat-call-initiate"),
-    path("calls/<uuid:pk>/",                        EndCallView.as_view(),                   name="chat-call-end"),
-    path("conversations/<uuid:pk>/calls/",          CallHistoryView.as_view(),               name="chat-call-history"),
+    # Calls
+    path("calls/", views.InitiateCallView.as_view(), name="chat-initiate-call"),
+    path("calls/<uuid:call_id>/", views.EndCallView.as_view(), name="chat-end-call"),
 
-    # ── Admin / Meta ─────────────────────────────────────────────────────────
-    path("unread-count/",                           UnreadCountView.as_view(),               name="chat-unread-count"),
-    path("audit-logs/",                             AuditLogView.as_view(),                  name="chat-audit-logs"),
+    # Utility
+    path("unread-count/", views.UnreadCountView.as_view(), name="chat-unread-count"),
+    path("audit-logs/", views.AuditLogListView.as_view(), name="chat-audit-logs"),
 ]

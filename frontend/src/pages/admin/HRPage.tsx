@@ -1,5 +1,5 @@
-// NEXUS — HR Management Page
-import { useState } from "react";
+// NEXUS — HR Management Page (Full Suite) v2
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import {
@@ -19,26 +19,85 @@ import {
 	Phone,
 	MapPin,
 	Briefcase,
+	GitBranch,
+	Upload,
+	UserMinus,
+	BookOpen,
+	DollarSign,
+	AlertTriangle,
+	Shield,
+	Settings2,
+	ClipboardList,
+	TrendingUp,
+	Award,
+	RefreshCw,
+	Filter,
+	Edit2,
+	Save,
 } from "lucide-react";
 import {
 	hrApi,
 	usersApi,
 	attendanceApi,
 	evaluationsApi,
+	financeApi,
+	certificatesApi,
 } from "../../services/api";
 import { useAuthStore } from "../../services/api";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import clsx from "clsx";
 
+// ── All available roles for non-attachee staff ─────────────────────────────────
+const STAFF_ROLES = [
+	{ value: "admin", label: "Admin" },
+	{ value: "hr", label: "HR" },
+	{ value: "executive", label: "Executive" },
+	{ value: "data_analyst", label: "Data Analyst" },
+	{ value: "broadcast_admin", label: "Broadcast Admin" },
+	{ value: "broadcast_staff", label: "Broadcast Staff" },
+	{ value: "broadcast_student", label: "Broadcast Student" },
+	{ value: "journalist", label: "Journalist" },
+	{ value: "presenter", label: "Presenter" },
+	{ value: "editor", label: "Editor" },
+	{ value: "videographer", label: "Videographer" },
+	{ value: "station_engineer", label: "Station Engineer" },
+	{ value: "finance", label: "Finance" },
+	{ value: "ict", label: "ICT" },
+	{ value: "legal", label: "Legal" },
+	{ value: "operations", label: "Operations" },
+	{ value: "procurement", label: "Procurement" },
+	{ value: "hse", label: "HSE" },
+	{ value: "security", label: "Security" },
+	{ value: "facilities", label: "Facilities" },
+	{ value: "customer_service", label: "Customer Service" },
+];
+
+// ── Certificate types matching the screenshot ──────────────────────────────────
+const CERT_TYPES = [
+	{ value: "completion", label: "Certificate of Completion" },
+	{ value: "recommendation", label: "Recommendation Letter" },
+	{ value: "achievement", label: "Achievement Award" },
+	{ value: "participation", label: "Participation Certificate" },
+];
+
 const TABS = [
-	"overview",
-	"attachees",
-	"leave",
-	"evaluations",
-	"departments",
+	{ key: "overview", label: "Overview", icon: TrendingUp },
+	{ key: "attachees", label: "Attachees", icon: GraduationCap },
+	{ key: "staff", label: "Staff", icon: Users },
+	{ key: "leave", label: "Leave", icon: Calendar },
+	{ key: "evaluations", label: "Evaluations", icon: ClipboardList },
+	{ key: "departments", label: "Departments", icon: Building2 },
+	{ key: "branches", label: "Branches", icon: GitBranch },
+	{ key: "recruitment", label: "Recruitment", icon: UserPlus },
+	{ key: "training", label: "Training", icon: BookOpen },
+	{ key: "stipends", label: "Stipends", icon: DollarSign },
+	{ key: "violations", label: "Violations", icon: AlertTriangle },
+	{ key: "certificates", label: "Certificates", icon: Award },
+	{ key: "audit", label: "Audit Log", icon: Shield },
+	{ key: "settings", label: "Org Settings", icon: Settings2 },
 ] as const;
-type Tab = (typeof TABS)[number];
+type Tab = (typeof TABS)[number]["key"];
 
 // ── Modal wrapper ──────────────────────────────────────────────────────────────
 function Modal({
@@ -52,10 +111,15 @@ function Modal({
 	onClose: () => void;
 	title: string;
 	children: React.ReactNode;
-	size?: "sm" | "md" | "lg";
+	size?: "sm" | "md" | "lg" | "xl";
 }) {
 	if (!open) return null;
-	const widths = { sm: "max-w-md", md: "max-w-xl", lg: "max-w-2xl" };
+	const widths = {
+		sm: "max-w-md",
+		md: "max-w-xl",
+		lg: "max-w-2xl",
+		xl: "max-w-4xl",
+	};
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
 			<div
@@ -81,7 +145,7 @@ function Modal({
 	);
 }
 
-// ── Shared error parser ────────────────────────────────────────────────────────
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 function parseApiError(err: any, fallback: string): string {
 	const data = err?.response?.data;
 	if (!data) return fallback;
@@ -91,8 +155,29 @@ function parseApiError(err: any, fallback: string): string {
 		.join(" · ");
 }
 
+function exportToCSV(data: any[], filename: string) {
+	if (!data.length) {
+		toast.error("No data to export");
+		return;
+	}
+	const headers = Object.keys(data[0]);
+	const rows = data.map((row) =>
+		headers.map((h) => JSON.stringify(row[h] ?? "")).join(","),
+	);
+	const csv = [headers.join(","), ...rows].join("\n");
+	const blob = new Blob([csv], { type: "text/csv" });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = filename;
+	a.click();
+	URL.revokeObjectURL(url);
+	toast.success(`Exported ${data.length} records`);
+}
+
 // ── Onboard Attachee Modal ─────────────────────────────────────────────────────
-function OnboardModal({
+// Password and Employee ID auto-generated by backend. Show credentials on success.
+function OnboardAttacheeModal({
 	open,
 	onClose,
 	departments,
@@ -110,6 +195,12 @@ function OnboardModal({
 		reset,
 		formState: { errors },
 	} = useForm<any>();
+	const [created, setCreated] = useState<{
+		full_name: string;
+		email: string;
+		employee_id: string;
+		temp_password: string;
+	} | null>(null);
 
 	const mutation = useMutation({
 		mutationFn: (data: any) =>
@@ -117,133 +208,500 @@ function OnboardModal({
 				first_name: data.first_name,
 				last_name: data.last_name,
 				email: data.email,
-				password: data.password,
 				role: "attachee",
 				...(organisationId && { organisation: organisationId }),
 				...(data.phone && { phone: data.phone }),
 				...(data.department && { department: data.department }),
-				...(data.employee_id && { employee_id: data.employee_id }),
+				...(data.institution && { institution: data.institution }),
+				...(data.internship_start && {
+					internship_start: data.internship_start,
+				}),
+				...(data.internship_end && { internship_end: data.internship_end }),
 			}),
-		onSuccess: () => {
+		onSuccess: (res) => {
 			qc.invalidateQueries({ queryKey: ["attachees"] });
 			qc.invalidateQueries({ queryKey: ["user-stats"] });
-			toast.success("Attachee onboarded successfully");
+			const d = res.data;
+			setCreated({
+				full_name: d.full_name || `${d.first_name} ${d.last_name}`,
+				email: d.email,
+				employee_id: d.employee_id || "—",
+				temp_password: d.temp_password || d.password || "Check your email",
+			});
 			reset();
-			onClose();
 		},
 		onError: (err: any) =>
 			toast.error(parseApiError(err, "Failed to onboard attachee")),
 	});
 
+	const handleClose = () => {
+		setCreated(null);
+		onClose();
+	};
+
 	return (
-		<Modal open={open} onClose={onClose} title="Onboard New Attachee" size="lg">
-			<form
-				onSubmit={handleSubmit((d) => mutation.mutate(d))}
-				className="space-y-4">
-				<div className="grid grid-cols-2 gap-4">
-					<div>
-						<label className="form-label">First Name</label>
-						<input
-							{...register("first_name", { required: "Required" })}
-							className="input"
-							placeholder="Jane"
-						/>
-						{errors.first_name && (
-							<p className="form-error">{String(errors.first_name.message)}</p>
-						)}
+		<Modal
+			open={open}
+			onClose={handleClose}
+			title={created ? "Attachee Onboarded" : "Onboard New Attachee"}
+			size="lg">
+			{created ? (
+				<div className="space-y-5">
+					<div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+						<CheckCircle size={20} className="text-green-400 shrink-0" />
+						<div>
+							<div className="text-sm font-semibold text-white">
+								{created.full_name} has been onboarded
+							</div>
+							<div className="text-xs text-slate-400 mt-0.5">
+								Share these credentials with the attachee. They must change
+								their password on first login.
+							</div>
+						</div>
 					</div>
-					<div>
-						<label className="form-label">Last Name</label>
-						<input
-							{...register("last_name", { required: "Required" })}
-							className="input"
-							placeholder="Muthoni"
-						/>
-						{errors.last_name && (
-							<p className="form-error">{String(errors.last_name.message)}</p>
-						)}
-					</div>
-				</div>
-
-				<div>
-					<label className="form-label">Email Address</label>
-					<input
-						{...register("email", {
-							required: "Required",
-							pattern: { value: /^\S+@\S+$/i, message: "Invalid email" },
-						})}
-						className="input"
-						placeholder="jane@example.com"
-						type="email"
-					/>
-					{errors.email && (
-						<p className="form-error">{String(errors.email.message)}</p>
-					)}
-				</div>
-
-				<div>
-					<label className="form-label">Password</label>
-					<input
-						{...register("password", {
-							required: "Required",
-							minLength: { value: 10, message: "Min 10 characters" },
-						})}
-						className="input"
-						type="password"
-						placeholder="Temporary password (min 10 chars)"
-					/>
-					{errors.password && (
-						<p className="form-error">{String(errors.password.message)}</p>
-					)}
-				</div>
-
-				<div className="grid grid-cols-2 gap-4">
-					<div>
-						<label className="form-label">Phone (optional)</label>
-						<input
-							{...register("phone")}
-							className="input"
-							placeholder="+254 700 000 000"
-						/>
-					</div>
-					<div>
-						<label className="form-label">Employee ID (optional)</label>
-						<input
-							{...register("employee_id")}
-							className="input"
-							placeholder="EMP-001"
-						/>
-					</div>
-				</div>
-
-				<div>
-					<label className="form-label">Department</label>
-					<select {...register("department")} className="input">
-						<option value="">— Select department —</option>
-						{departments.map((d: any) => (
-							<option key={d.id} value={d.id}>
-								{d.name}
-							</option>
+					<div className="space-y-3">
+						{[
+							{ label: "Email / Username", value: created.email },
+							{ label: "Employee ID", value: created.employee_id },
+							{
+								label: "Temporary Password",
+								value: created.temp_password,
+								mono: true,
+							},
+						].map(({ label, value, mono }) => (
+							<div
+								key={label}
+								className="flex items-center justify-between p-3 bg-surface rounded-xl border border-surface-border gap-3">
+								<div>
+									<div className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">
+										{label}
+									</div>
+									<div
+										className={clsx(
+											"text-sm text-white font-medium",
+											mono && "font-mono",
+										)}>
+										{value}
+									</div>
+								</div>
+								<button
+									onClick={() => {
+										navigator.clipboard.writeText(value);
+										toast.success(`${label} copied`);
+									}}
+									className="btn-ghost btn-sm p-1.5 text-slate-400 hover:text-white shrink-0"
+									title={`Copy ${label}`}>
+									<svg
+										width="13"
+										height="13"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2">
+										<rect x="9" y="9" width="13" height="13" rx="2" />
+										<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+									</svg>
+								</button>
+							</div>
 						))}
-					</select>
+					</div>
+					<div className="flex justify-end gap-3">
+						<button
+							onClick={() => setCreated(null)}
+							className="btn-secondary btn-sm">
+							<GraduationCap size={13} /> Onboard Another
+						</button>
+						<button onClick={handleClose} className="btn-primary btn-sm">
+							Done
+						</button>
+					</div>
 				</div>
+			) : (
+				<form
+					onSubmit={handleSubmit((d) => mutation.mutate(d))}
+					className="space-y-4">
+					<div className="p-3 bg-nexus-600/10 border border-nexus-500/20 rounded-xl text-xs text-slate-400 flex items-start gap-2">
+						<Shield size={13} className="text-nexus-400 mt-0.5 shrink-0" />
+						<span>
+							Password and Employee ID are{" "}
+							<span className="text-white font-medium">auto-generated</span> by
+							the system. Credentials will be shown after creation.
+						</span>
+					</div>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="form-label">First Name</label>
+							<input
+								{...register("first_name", { required: "Required" })}
+								className="input"
+								placeholder="Jane"
+							/>
+							{errors.first_name && (
+								<p className="form-error">
+									{String(errors.first_name.message)}
+								</p>
+							)}
+						</div>
+						<div>
+							<label className="form-label">Last Name</label>
+							<input
+								{...register("last_name", { required: "Required" })}
+								className="input"
+								placeholder="Muthoni"
+							/>
+							{errors.last_name && (
+								<p className="form-error">{String(errors.last_name.message)}</p>
+							)}
+						</div>
+					</div>
+					<div>
+						<label className="form-label">Email Address</label>
+						<input
+							{...register("email", {
+								required: "Required",
+								pattern: { value: /^\S+@\S+$/i, message: "Invalid email" },
+							})}
+							className="input"
+							placeholder="jane@example.com"
+							type="email"
+						/>
+						{errors.email && (
+							<p className="form-error">{String(errors.email.message)}</p>
+						)}
+					</div>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="form-label">Phone (optional)</label>
+							<input
+								{...register("phone")}
+								className="input"
+								placeholder="+254 700 000 000"
+							/>
+						</div>
+						<div>
+							<label className="form-label">Department</label>
+							<select {...register("department")} className="input">
+								<option value="">— Select department —</option>
+								{departments.map((d: any) => (
+									<option key={d.id} value={d.id}>
+										{d.name}
+									</option>
+								))}
+							</select>
+						</div>
+					</div>
+					<div>
+						<label className="form-label">Institution</label>
+						<input
+							{...register("institution")}
+							className="input"
+							placeholder="University of Nairobi"
+						/>
+					</div>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="form-label">Internship Start</label>
+							<input
+								{...register("internship_start")}
+								className="input"
+								type="date"
+							/>
+						</div>
+						<div>
+							<label className="form-label">Internship End</label>
+							<input
+								{...register("internship_end")}
+								className="input"
+								type="date"
+							/>
+						</div>
+					</div>
+					<div className="flex justify-end gap-3 pt-2">
+						<button
+							type="button"
+							onClick={handleClose}
+							className="btn-secondary btn-sm">
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={mutation.isPending}
+							className="btn-primary btn-sm">
+							<GraduationCap size={13} />{" "}
+							{mutation.isPending ? "Onboarding…" : "Onboard Attachee"}
+						</button>
+					</div>
+				</form>
+			)}
+		</Modal>
+	);
+}
 
-				<div className="flex justify-end gap-3 pt-2">
-					<button
-						type="button"
-						onClick={onClose}
-						className="btn-secondary btn-sm">
-						Cancel
-					</button>
-					<button
-						type="submit"
-						disabled={mutation.isPending}
-						className="btn-primary btn-sm">
-						<UserPlus size={13} />
-						{mutation.isPending ? "Onboarding…" : "Onboard Attachee"}
-					</button>
+// ── Add Staff Member Modal (non-attachee) ──────────────────────────────────────
+// Password and Employee ID are auto-generated by the backend (pgAdmin configured).
+// On success we show the generated credentials so HR can share them.
+function AddStaffModal({
+	open,
+	onClose,
+	departments,
+	branches,
+	organisationId,
+}: {
+	open: boolean;
+	onClose: () => void;
+	departments: any[];
+	branches: any[];
+	organisationId?: string | null;
+}) {
+	const qc = useQueryClient();
+	const {
+		register,
+		handleSubmit,
+		reset,
+		formState: { errors },
+	} = useForm<any>();
+	const [created, setCreated] = useState<{
+		full_name: string;
+		email: string;
+		employee_id: string;
+		temp_password: string;
+	} | null>(null);
+
+	const mutation = useMutation({
+		mutationFn: (data: any) =>
+			usersApi.create({
+				first_name: data.first_name,
+				last_name: data.last_name,
+				email: data.email,
+				role: data.role,
+				...(organisationId && { organisation: organisationId }),
+				...(data.phone && { phone: data.phone }),
+				...(data.department && { department: data.department }),
+				...(data.branch && { branch: data.branch }),
+			}),
+		onSuccess: (res) => {
+			qc.invalidateQueries({ queryKey: ["all-staff"] });
+			qc.invalidateQueries({ queryKey: ["user-stats"] });
+			const d = res.data;
+			setCreated({
+				full_name: d.full_name || `${d.first_name} ${d.last_name}`,
+				email: d.email,
+				employee_id: d.employee_id || "—",
+				temp_password: d.temp_password || d.password || "Check your email",
+			});
+			reset();
+		},
+		onError: (err: any) =>
+			toast.error(parseApiError(err, "Failed to add staff member")),
+	});
+
+	const handleClose = () => {
+		setCreated(null);
+		onClose();
+	};
+
+	return (
+		<Modal
+			open={open}
+			onClose={handleClose}
+			title={created ? "Staff Member Created" : "Add Staff Member"}
+			size="lg">
+			{/* ── Success panel ── */}
+			{created ? (
+				<div className="space-y-5">
+					<div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+						<CheckCircle size={20} className="text-green-400 shrink-0" />
+						<div>
+							<div className="text-sm font-semibold text-white">
+								{created.full_name} has been added
+							</div>
+							<div className="text-xs text-slate-400 mt-0.5">
+								Share the credentials below with the new staff member. The
+								password must be changed on first login.
+							</div>
+						</div>
+					</div>
+					<div className="space-y-3">
+						{[
+							{ label: "Email / Username", value: created.email },
+							{ label: "Employee ID", value: created.employee_id },
+							{
+								label: "Temporary Password",
+								value: created.temp_password,
+								mono: true,
+								sensitive: true,
+							},
+						].map(({ label, value, mono, sensitive }) => (
+							<div
+								key={label}
+								className="flex items-center justify-between p-3 bg-surface rounded-xl border border-surface-border gap-3">
+								<div>
+									<div className="text-[10px] text-slate-500 uppercase tracking-wide mb-0.5">
+										{label}
+									</div>
+									<div
+										className={clsx(
+											"text-sm text-white font-medium",
+											mono && "font-mono",
+										)}>
+										{value}
+									</div>
+								</div>
+								<button
+									onClick={() => {
+										navigator.clipboard.writeText(value);
+										toast.success(`${label} copied`);
+									}}
+									className="btn-ghost btn-sm p-1.5 text-slate-400 hover:text-white shrink-0"
+									title={`Copy ${label}`}>
+									<svg
+										width="13"
+										height="13"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2">
+										<rect x="9" y="9" width="13" height="13" rx="2" />
+										<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+									</svg>
+								</button>
+							</div>
+						))}
+					</div>
+					<div className="flex justify-end gap-3">
+						<button
+							onClick={() => {
+								setCreated(null);
+							}}
+							className="btn-secondary btn-sm">
+							<UserPlus size={13} /> Add Another
+						</button>
+						<button onClick={handleClose} className="btn-primary btn-sm">
+							Done
+						</button>
+					</div>
 				</div>
-			</form>
+			) : (
+				/* ── Form ── */
+				<form
+					onSubmit={handleSubmit((d) => mutation.mutate(d))}
+					className="space-y-4">
+					<div className="p-3 bg-nexus-600/10 border border-nexus-500/20 rounded-xl text-xs text-slate-400 flex items-start gap-2">
+						<Shield size={13} className="text-nexus-400 mt-0.5 shrink-0" />
+						<span>
+							Password and Employee ID are{" "}
+							<span className="text-white font-medium">auto-generated</span> by
+							the system. The credentials will be shown to you after creation.
+						</span>
+					</div>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="form-label">First Name</label>
+							<input
+								{...register("first_name", { required: "Required" })}
+								className="input"
+								placeholder="John"
+							/>
+							{errors.first_name && (
+								<p className="form-error">
+									{String(errors.first_name.message)}
+								</p>
+							)}
+						</div>
+						<div>
+							<label className="form-label">Last Name</label>
+							<input
+								{...register("last_name", { required: "Required" })}
+								className="input"
+								placeholder="Kamau"
+							/>
+							{errors.last_name && (
+								<p className="form-error">{String(errors.last_name.message)}</p>
+							)}
+						</div>
+					</div>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="form-label">Email Address</label>
+							<input
+								{...register("email", {
+									required: "Required",
+									pattern: { value: /^\S+@\S+$/i, message: "Invalid email" },
+								})}
+								className="input"
+								placeholder="john@example.com"
+								type="email"
+							/>
+							{errors.email && (
+								<p className="form-error">{String(errors.email.message)}</p>
+							)}
+						</div>
+						<div>
+							<label className="form-label">Role</label>
+							<select
+								{...register("role", { required: "Required" })}
+								className="input">
+								<option value="">— Select role —</option>
+								{STAFF_ROLES.map((r) => (
+									<option key={r.value} value={r.value}>
+										{r.label}
+									</option>
+								))}
+							</select>
+							{errors.role && (
+								<p className="form-error">{String(errors.role.message)}</p>
+							)}
+						</div>
+					</div>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="form-label">Phone (optional)</label>
+							<input
+								{...register("phone")}
+								className="input"
+								placeholder="+254 700 000 000"
+							/>
+						</div>
+						<div>
+							<label className="form-label">Department</label>
+							<select {...register("department")} className="input">
+								<option value="">— Select —</option>
+								{departments.map((d: any) => (
+									<option key={d.id} value={d.id}>
+										{d.name}
+									</option>
+								))}
+							</select>
+						</div>
+					</div>
+					<div>
+						<label className="form-label">Branch</label>
+						<select {...register("branch")} className="input">
+							<option value="">— Select —</option>
+							{branches.map((b: any) => (
+								<option key={b.id} value={b.id}>
+									{b.name}
+								</option>
+							))}
+						</select>
+					</div>
+					<div className="flex justify-end gap-3 pt-2">
+						<button
+							type="button"
+							onClick={handleClose}
+							className="btn-secondary btn-sm">
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={mutation.isPending}
+							className="btn-primary btn-sm">
+							<UserPlus size={13} />{" "}
+							{mutation.isPending ? "Creating…" : "Add Staff Member"}
+						</button>
+					</div>
+				</form>
+			)}
 		</Modal>
 	);
 }
@@ -256,35 +714,58 @@ function ViewAttacheeModal({
 	attachee: any | null;
 	onClose: () => void;
 }) {
+	const qc = useQueryClient();
+	const offboardMutation = useMutation({
+		mutationFn: () => hrApi.offboard(attachee.id, { reason: "HR action" }),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["attachees"] });
+			toast.success("Attachee offboarded");
+			onClose();
+		},
+		onError: () => toast.error("Offboard failed"),
+	});
 	if (!attachee) return null;
 	const initials = attachee.full_name
 		?.split(" ")
 		.map((n: string) => n[0])
 		.join("")
 		.slice(0, 2);
-
 	return (
-		<Modal open={!!attachee} onClose={onClose} title="Attachee Profile">
+		<Modal
+			open={!!attachee}
+			onClose={onClose}
+			title="Attachee Profile"
+			size="lg">
 			<div className="space-y-5">
-				<div className="flex items-center gap-4">
-					<div className="w-14 h-14 rounded-full bg-nexus-600/20 flex items-center justify-center text-xl font-bold text-nexus-400">
-						{initials}
-					</div>
-					<div>
-						<div className="text-lg font-semibold text-white">
-							{attachee.full_name}
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-4">
+						<div className="w-14 h-14 rounded-full bg-nexus-600/20 flex items-center justify-center text-xl font-bold text-nexus-400">
+							{initials}
 						</div>
-						<div className="text-sm text-slate-400">{attachee.email}</div>
-						<span
-							className={clsx(
-								"badge text-[10px] mt-1",
-								attachee.is_active ? "badge-green" : "badge-slate",
-							)}>
-							{attachee.is_active ? "Active" : "Inactive"}
-						</span>
+						<div>
+							<div className="text-lg font-semibold text-white">
+								{attachee.full_name}
+							</div>
+							<div className="text-sm text-slate-400">{attachee.email}</div>
+							<span
+								className={clsx(
+									"badge text-[10px] mt-1",
+									attachee.is_active ? "badge-green" : "badge-slate",
+								)}>
+								{attachee.is_active ? "Active" : "Inactive"}
+							</span>
+						</div>
 					</div>
+					{attachee.is_active && (
+						<button
+							onClick={() => offboardMutation.mutate()}
+							disabled={offboardMutation.isPending}
+							className="btn-danger btn-sm">
+							<UserMinus size={13} />{" "}
+							{offboardMutation.isPending ? "Processing…" : "Offboard"}
+						</button>
+					)}
 				</div>
-
 				<div className="grid grid-cols-2 gap-3">
 					{[
 						{
@@ -312,8 +793,8 @@ function ViewAttacheeModal({
 						},
 						{
 							icon: Briefcase,
-							label: "Role",
-							value: attachee.role_display || "Attachee",
+							label: "Employee ID",
+							value: attachee.employee_id || "—",
 						},
 					].map(({ icon: Icon, label, value }) => (
 						<div
@@ -329,7 +810,6 @@ function ViewAttacheeModal({
 						</div>
 					))}
 				</div>
-
 				{attachee.notes && (
 					<div className="p-3 bg-surface rounded-xl border border-surface-border">
 						<div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
@@ -338,12 +818,168 @@ function ViewAttacheeModal({
 						<p className="text-sm text-slate-300">{attachee.notes}</p>
 					</div>
 				)}
-
 				<div className="flex justify-end">
 					<button onClick={onClose} className="btn-secondary btn-sm">
 						Close
 					</button>
 				</div>
+			</div>
+		</Modal>
+	);
+}
+
+// ── Leave Review Modal ─────────────────────────────────────────────────────────
+function LeaveReviewModal({
+	req,
+	onClose,
+	onReview,
+}: {
+	req: any | null;
+	onClose: () => void;
+	onReview: (id: string, status: string, comment: string) => void;
+}) {
+	const [comment, setComment] = useState("");
+	const [pending, setPending] = useState(false);
+	if (!req) return null;
+
+	const handle = async (status: string) => {
+		setPending(true);
+		await onReview(req.id, status, comment);
+		setPending(false);
+		setComment("");
+	};
+
+	return (
+		<Modal
+			open={!!req}
+			onClose={onClose}
+			title="Leave Request Details"
+			size="lg">
+			<div className="space-y-5">
+				<div className="grid grid-cols-2 gap-3">
+					{[
+						{
+							label: "Employee",
+							value: req.user_name || req.user_full_name || "—",
+						},
+						{
+							label: "Leave Type",
+							value: req.leave_type?.replace(/_/g, " ") || "—",
+						},
+						{
+							label: "Start Date",
+							value: req.start_date
+								? format(parseISO(req.start_date), "dd MMM yyyy")
+								: "—",
+						},
+						{
+							label: "End Date",
+							value: req.end_date
+								? format(parseISO(req.end_date), "dd MMM yyyy")
+								: "—",
+						},
+						{ label: "Days Requested", value: req.days_requested ?? "—" },
+						{
+							label: "Applied On",
+							value: req.created_at
+								? format(parseISO(req.created_at), "dd MMM yyyy HH:mm")
+								: "—",
+						},
+					].map(({ label, value }) => (
+						<div
+							key={label}
+							className="p-3 bg-surface rounded-xl border border-surface-border">
+							<div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
+								{label}
+							</div>
+							<div className="text-sm text-white font-medium capitalize">
+								{value}
+							</div>
+						</div>
+					))}
+				</div>
+
+				{req.reason && (
+					<div className="p-3 bg-surface rounded-xl border border-surface-border">
+						<div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
+							Reason
+						</div>
+						<p className="text-sm text-slate-300">{req.reason}</p>
+					</div>
+				)}
+
+				{/* Reviewed by */}
+				{(req.status === "approved" || req.status === "rejected") && (
+					<div className="p-3 bg-surface rounded-xl border border-surface-border">
+						<div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
+							{req.status === "approved" ? "Approved" : "Rejected"} By
+						</div>
+						<div className="flex items-center gap-2 mt-1">
+							<span
+								className={clsx(
+									"badge text-[10px]",
+									req.status === "approved" ? "badge-green" : "badge-red",
+								)}>
+								{req.status}
+							</span>
+							<span className="text-sm text-white">
+								{req.reviewed_by_name || req.approved_by_name || "—"}
+							</span>
+							{req.reviewed_at && (
+								<span className="text-xs text-slate-500">
+									&bull;{" "}
+									{format(parseISO(req.reviewed_at), "dd MMM yyyy HH:mm")}
+								</span>
+							)}
+						</div>
+						{req.review_comment && (
+							<p className="text-xs text-slate-400 mt-2">
+								"{req.review_comment}"
+							</p>
+						)}
+					</div>
+				)}
+
+				{/* Actions only for pending */}
+				{req.status === "pending" && (
+					<>
+						<div>
+							<label className="form-label">Review Comment (optional)</label>
+							<textarea
+								value={comment}
+								onChange={(e) => setComment(e.target.value)}
+								className="input resize-none"
+								rows={2}
+								placeholder="Add a note to the employee…"
+							/>
+						</div>
+						<div className="flex justify-end gap-3">
+							<button onClick={onClose} className="btn-secondary btn-sm">
+								Cancel
+							</button>
+							<button
+								onClick={() => handle("rejected")}
+								disabled={pending}
+								className="btn-danger btn-sm">
+								<XCircle size={13} /> Reject
+							</button>
+							<button
+								onClick={() => handle("approved")}
+								disabled={pending}
+								className="btn-primary btn-sm">
+								<CheckCircle size={13} /> Approve
+							</button>
+						</div>
+					</>
+				)}
+
+				{req.status !== "pending" && (
+					<div className="flex justify-end">
+						<button onClick={onClose} className="btn-secondary btn-sm">
+							Close
+						</button>
+					</div>
+				)}
 			</div>
 		</Modal>
 	);
@@ -366,7 +1002,6 @@ function NewEvaluationModal({
 		reset,
 		formState: { errors },
 	} = useForm<any>();
-
 	const mutation = useMutation({
 		mutationFn: (data: any) => evaluationsApi.create(data),
 		onSuccess: () => {
@@ -378,7 +1013,6 @@ function NewEvaluationModal({
 		onError: (err: any) =>
 			toast.error(parseApiError(err, "Failed to create evaluation")),
 	});
-
 	return (
 		<Modal open={open} onClose={onClose} title="New Evaluation" size="md">
 			<form
@@ -400,7 +1034,6 @@ function NewEvaluationModal({
 						<p className="form-error">{String(errors.attachee.message)}</p>
 					)}
 				</div>
-
 				<div>
 					<label className="form-label">Evaluation Type</label>
 					<select
@@ -418,7 +1051,6 @@ function NewEvaluationModal({
 						</p>
 					)}
 				</div>
-
 				<div className="grid grid-cols-2 gap-4">
 					<div>
 						<label className="form-label">Period Start</label>
@@ -445,7 +1077,6 @@ function NewEvaluationModal({
 						)}
 					</div>
 				</div>
-
 				<div>
 					<label className="form-label">Notes (optional)</label>
 					<textarea
@@ -455,7 +1086,6 @@ function NewEvaluationModal({
 						placeholder="Any notes for this evaluation…"
 					/>
 				</div>
-
 				<div className="flex justify-end gap-3 pt-2">
 					<button
 						type="button"
@@ -467,7 +1097,7 @@ function NewEvaluationModal({
 						type="submit"
 						disabled={mutation.isPending}
 						className="btn-primary btn-sm">
-						<Plus size={13} />
+						<Plus size={13} />{" "}
 						{mutation.isPending ? "Creating…" : "Create Evaluation"}
 					</button>
 				</div>
@@ -493,7 +1123,6 @@ function AddDepartmentModal({
 		reset,
 		formState: { errors },
 	} = useForm<any>();
-
 	const mutation = useMutation({
 		mutationFn: (data: any) =>
 			hrApi.createDept({
@@ -510,7 +1139,6 @@ function AddDepartmentModal({
 		onError: (err: any) =>
 			toast.error(parseApiError(err, "Failed to create department")),
 	});
-
 	return (
 		<Modal open={open} onClose={onClose} title="Add Department" size="sm">
 			<form
@@ -527,7 +1155,6 @@ function AddDepartmentModal({
 						<p className="form-error">{String(errors.name.message)}</p>
 					)}
 				</div>
-
 				<div>
 					<label className="form-label">Code</label>
 					<input
@@ -539,7 +1166,6 @@ function AddDepartmentModal({
 						<p className="form-error">{String(errors.code.message)}</p>
 					)}
 				</div>
-
 				<div>
 					<label className="form-label">Description (optional)</label>
 					<textarea
@@ -549,7 +1175,6 @@ function AddDepartmentModal({
 						placeholder="What does this department do?"
 					/>
 				</div>
-
 				<div className="flex justify-end gap-3 pt-2">
 					<button
 						type="button"
@@ -561,7 +1186,7 @@ function AddDepartmentModal({
 						type="submit"
 						disabled={mutation.isPending}
 						className="btn-primary btn-sm">
-						<Plus size={13} />
+						<Plus size={13} />{" "}
 						{mutation.isPending ? "Creating…" : "Add Department"}
 					</button>
 				</div>
@@ -570,86 +1195,728 @@ function AddDepartmentModal({
 	);
 }
 
-// ── Export helper ──────────────────────────────────────────────────────────────
-function exportToCSV(data: any[], filename: string) {
-	if (!data.length) {
-		toast.error("No data to export");
-		return;
-	}
-	const headers = Object.keys(data[0]);
-	const rows = data.map((row) =>
-		headers.map((h) => JSON.stringify(row[h] ?? "")).join(","),
+// ── Add Branch Modal ───────────────────────────────────────────────────────────
+function AddBranchModal({
+	open,
+	onClose,
+	organisationId,
+}: {
+	open: boolean;
+	onClose: () => void;
+	organisationId?: string | null;
+}) {
+	const qc = useQueryClient();
+	const {
+		register,
+		handleSubmit,
+		reset,
+		formState: { errors },
+	} = useForm<any>();
+	const mutation = useMutation({
+		mutationFn: (data: any) =>
+			hrApi.createBranch({
+				...data,
+				...(organisationId && { organisation: organisationId }),
+			}),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["branches"] });
+			toast.success("Branch created");
+			reset();
+			onClose();
+		},
+		onError: (err: any) =>
+			toast.error(parseApiError(err, "Failed to create branch")),
+	});
+	return (
+		<Modal open={open} onClose={onClose} title="Add Branch" size="sm">
+			<form
+				onSubmit={handleSubmit((d) => mutation.mutate(d))}
+				className="space-y-4">
+				<div>
+					<label className="form-label">Branch Name</label>
+					<input
+						{...register("name", { required: "Required" })}
+						className="input"
+						placeholder="e.g. Mombasa Office"
+					/>
+					{errors.name && (
+						<p className="form-error">{String(errors.name.message)}</p>
+					)}
+				</div>
+				<div>
+					<label className="form-label">Code</label>
+					<input
+						{...register("code", { required: "Required" })}
+						className="input"
+						placeholder="e.g. MBA"
+					/>
+					{errors.code && (
+						<p className="form-error">{String(errors.code.message)}</p>
+					)}
+				</div>
+				<div>
+					<label className="form-label">Location / Address</label>
+					<input
+						{...register("location")}
+						className="input"
+						placeholder="e.g. Nyali, Mombasa"
+					/>
+				</div>
+				<div>
+					<label className="form-label">Contact Phone</label>
+					<input
+						{...register("contact_phone")}
+						className="input"
+						placeholder="+254 700 000 000"
+					/>
+				</div>
+				<div className="flex justify-end gap-3 pt-2">
+					<button
+						type="button"
+						onClick={onClose}
+						className="btn-secondary btn-sm">
+						Cancel
+					</button>
+					<button
+						type="submit"
+						disabled={mutation.isPending}
+						className="btn-primary btn-sm">
+						<Plus size={13} /> {mutation.isPending ? "Creating…" : "Add Branch"}
+					</button>
+				</div>
+			</form>
+		</Modal>
 	);
-	const csv = [headers.join(","), ...rows].join("\n");
-	const blob = new Blob([csv], { type: "text/csv" });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = filename;
-	a.click();
-	URL.revokeObjectURL(url);
-	toast.success(`Exported ${data.length} records`);
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────────
+// ── Add Recruitment Modal ──────────────────────────────────────────────────────
+function AddRecruitmentModal({
+	open,
+	onClose,
+	departments,
+}: {
+	open: boolean;
+	onClose: () => void;
+	departments: any[];
+}) {
+	const {
+		register,
+		handleSubmit,
+		reset,
+		formState: { errors },
+	} = useForm<any>();
+	const mutation = useMutation({
+		mutationFn: (data: any) => hrApi.attacheePrograms({ ...data }),
+		onSuccess: () => {
+			toast.success("Recruitment posting created");
+			reset();
+			onClose();
+		},
+		onError: (err: any) =>
+			toast.error(parseApiError(err, "Failed to create posting")),
+	});
+	return (
+		<Modal
+			open={open}
+			onClose={onClose}
+			title="New Recruitment Posting"
+			size="lg">
+			<form
+				onSubmit={handleSubmit((d) => mutation.mutate(d))}
+				className="space-y-4">
+				<div>
+					<label className="form-label">Position / Role Title</label>
+					<input
+						{...register("title", { required: "Required" })}
+						className="input"
+						placeholder="e.g. Broadcast Attachee"
+					/>
+					{errors.title && (
+						<p className="form-error">{String(errors.title.message)}</p>
+					)}
+				</div>
+				<div className="grid grid-cols-2 gap-4">
+					<div>
+						<label className="form-label">Department</label>
+						<select {...register("department")} className="input">
+							<option value="">— Select —</option>
+							{departments.map((d: any) => (
+								<option key={d.id} value={d.id}>
+									{d.name}
+								</option>
+							))}
+						</select>
+					</div>
+					<div>
+						<label className="form-label">Number of Slots</label>
+						<input
+							{...register("slots")}
+							className="input"
+							type="number"
+							min={1}
+							placeholder="e.g. 3"
+						/>
+					</div>
+				</div>
+				<div className="grid grid-cols-2 gap-4">
+					<div>
+						<label className="form-label">Start Date</label>
+						<input {...register("start_date")} className="input" type="date" />
+					</div>
+					<div>
+						<label className="form-label">End Date</label>
+						<input {...register("end_date")} className="input" type="date" />
+					</div>
+				</div>
+				<div>
+					<label className="form-label">Description / Requirements</label>
+					<textarea
+						{...register("description")}
+						className="input resize-none"
+						rows={3}
+						placeholder="Skills, qualifications, or program details…"
+					/>
+				</div>
+				<div className="flex justify-end gap-3 pt-2">
+					<button
+						type="button"
+						onClick={onClose}
+						className="btn-secondary btn-sm">
+						Cancel
+					</button>
+					<button
+						type="submit"
+						disabled={mutation.isPending}
+						className="btn-primary btn-sm">
+						<Plus size={13} />{" "}
+						{mutation.isPending ? "Posting…" : "Create Posting"}
+					</button>
+				</div>
+			</form>
+		</Modal>
+	);
+}
+
+// ── Generate Certificate Modal (FIX: attachee_id, correct cert types) ──────────
+function GenerateCertModal({
+	open,
+	onClose,
+	attachees,
+}: {
+	open: boolean;
+	onClose: () => void;
+	attachees: any[];
+}) {
+	const qc = useQueryClient();
+	const {
+		register,
+		handleSubmit,
+		reset,
+		formState: { errors },
+	} = useForm<any>();
+	const mutation = useMutation({
+		mutationFn: (data: any) =>
+			certificatesApi.generate({
+				// backend expects attachee_id not attachee
+				attachee_id: data.attachee_id,
+				certificate_type: data.certificate_type,
+				...(data.custom_message && { custom_message: data.custom_message }),
+			}),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["certificates"] });
+			toast.success("Certificate generated");
+			reset();
+			onClose();
+		},
+		onError: (err: any) =>
+			toast.error(parseApiError(err, "Failed to generate certificate")),
+	});
+	return (
+		<Modal open={open} onClose={onClose} title="Generate Certificate" size="md">
+			<form
+				onSubmit={handleSubmit((d) => mutation.mutate(d))}
+				className="space-y-4">
+				<div>
+					<label className="form-label">Attachee</label>
+					<select
+						{...register("attachee_id", {
+							required: "Please select an attachee",
+						})}
+						className="input">
+						<option value="">— Select attachee —</option>
+						{attachees.map((a: any) => (
+							<option key={a.id} value={a.id}>
+								{a.full_name}
+							</option>
+						))}
+					</select>
+					{errors.attachee_id && (
+						<p className="form-error">{String(errors.attachee_id.message)}</p>
+					)}
+				</div>
+				<div>
+					<label className="form-label">Certificate Type</label>
+					<select
+						{...register("certificate_type", {
+							required: "Please select a type",
+						})}
+						className="input">
+						<option value="">— Select type —</option>
+						{CERT_TYPES.map((t) => (
+							<option key={t.value} value={t.value}>
+								{t.label}
+							</option>
+						))}
+					</select>
+					{errors.certificate_type && (
+						<p className="form-error">
+							{String(errors.certificate_type.message)}
+						</p>
+					)}
+				</div>
+				<div>
+					<label className="form-label">Custom Message (optional)</label>
+					<textarea
+						{...register("custom_message")}
+						className="input resize-none"
+						rows={2}
+						placeholder="Personalised message on the certificate…"
+					/>
+				</div>
+				<div className="flex justify-end gap-3 pt-2">
+					<button
+						type="button"
+						onClick={onClose}
+						className="btn-secondary btn-sm">
+						Cancel
+					</button>
+					<button
+						type="submit"
+						disabled={mutation.isPending}
+						className="btn-primary btn-sm">
+						<Award size={13} />{" "}
+						{mutation.isPending ? "Generating…" : "Generate"}
+					</button>
+				</div>
+			</form>
+		</Modal>
+	);
+}
+
+// ── Bulk Import Modal ──────────────────────────────────────────────────────────
+function BulkImportModal({
+	open,
+	onClose,
+}: {
+	open: boolean;
+	onClose: () => void;
+}) {
+	const qc = useQueryClient();
+	const fileRef = useRef<HTMLInputElement>(null);
+	const [file, setFile] = useState<File | null>(null);
+	const mutation = useMutation({
+		mutationFn: () => usersApi.bulkImport(file!),
+		onSuccess: (res) => {
+			qc.invalidateQueries({ queryKey: ["attachees"] });
+			qc.invalidateQueries({ queryKey: ["user-stats"] });
+			toast.success(`Imported ${res.data?.created ?? "?"} records`);
+			setFile(null);
+			onClose();
+		},
+		onError: (err: any) => toast.error(parseApiError(err, "Import failed")),
+	});
+	return (
+		<Modal
+			open={open}
+			onClose={() => {
+				setFile(null);
+				onClose();
+			}}
+			title="Bulk Import Attachees"
+			size="md">
+			<div className="space-y-5">
+				<div className="p-4 bg-nexus-600/10 border border-nexus-500/20 rounded-xl text-sm text-slate-300">
+					Upload a CSV with columns:{" "}
+					<span className="font-mono text-nexus-400">
+						first_name, last_name, email, phone, department, institution,
+						employee_id
+					</span>
+					. Temporary passwords are auto-generated.
+				</div>
+				<div
+					className="border-2 border-dashed border-surface-border rounded-xl p-8 text-center cursor-pointer hover:border-nexus-500/40 transition-colors"
+					onClick={() => fileRef.current?.click()}>
+					<Upload size={24} className="mx-auto text-slate-500 mb-2" />
+					{file ? (
+						<div>
+							<div className="text-sm font-medium text-white">{file.name}</div>
+							<div className="text-xs text-slate-500 mt-1">
+								{(file.size / 1024).toFixed(1)} KB
+							</div>
+						</div>
+					) : (
+						<div>
+							<div className="text-sm text-slate-400">
+								Click to select a CSV file
+							</div>
+							<div className="text-xs text-slate-500 mt-1">
+								or drag and drop
+							</div>
+						</div>
+					)}
+					<input
+						ref={fileRef}
+						type="file"
+						accept=".csv"
+						className="hidden"
+						onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+					/>
+				</div>
+				<div className="flex justify-end gap-3">
+					<button
+						onClick={() => {
+							setFile(null);
+							onClose();
+						}}
+						className="btn-secondary btn-sm">
+						Cancel
+					</button>
+					<button
+						onClick={() => mutation.mutate()}
+						disabled={!file || mutation.isPending}
+						className="btn-primary btn-sm">
+						<Upload size={13} /> {mutation.isPending ? "Importing…" : "Import"}
+					</button>
+				</div>
+			</div>
+		</Modal>
+	);
+}
+
+// ── Org Settings Modal (FIX: added HR policy defaults editing) ─────────────────
+function OrgSettingsModal({
+	open,
+	onClose,
+	org,
+}: {
+	open: boolean;
+	onClose: () => void;
+	org: any;
+}) {
+	const qc = useQueryClient();
+	const {
+		register,
+		handleSubmit,
+		formState: { errors },
+	} = useForm<any>({ defaultValues: org });
+	const mutation = useMutation({
+		mutationFn: (data: any) => hrApi.updateOrg(data),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["organisation"] });
+			toast.success("Organisation updated");
+			onClose();
+		},
+		onError: (err: any) => toast.error(parseApiError(err, "Update failed")),
+	});
+	return (
+		<Modal
+			open={open}
+			onClose={onClose}
+			title="Edit Organisation Settings"
+			size="lg">
+			<form
+				onSubmit={handleSubmit((d) => mutation.mutate(d))}
+				className="space-y-5">
+				{/* Org info */}
+				<div>
+					<p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+						Organisation Info
+					</p>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="form-label">Organisation Name</label>
+							<input
+								{...register("name", { required: "Required" })}
+								className="input"
+							/>
+							{errors.name && (
+								<p className="form-error">{String(errors.name.message)}</p>
+							)}
+						</div>
+						<div>
+							<label className="form-label">Short Code</label>
+							<input
+								{...register("code")}
+								className="input"
+								placeholder="e.g. RTK"
+							/>
+						</div>
+					</div>
+					<div className="grid grid-cols-2 gap-4 mt-4">
+						<div>
+							<label className="form-label">Contact Email</label>
+							<input
+								{...register("contact_email")}
+								className="input"
+								type="email"
+							/>
+						</div>
+						<div>
+							<label className="form-label">Contact Phone</label>
+							<input {...register("contact_phone")} className="input" />
+						</div>
+					</div>
+					<div className="mt-4">
+						<label className="form-label">Physical Address</label>
+						<input
+							{...register("address")}
+							className="input"
+							placeholder="Street, City"
+						/>
+					</div>
+					<div className="mt-4">
+						<label className="form-label">Website</label>
+						<input
+							{...register("website")}
+							className="input"
+							placeholder="https://example.com"
+							type="url"
+						/>
+					</div>
+					<div className="mt-4">
+						<label className="form-label">Mission Statement</label>
+						<textarea
+							{...register("mission")}
+							className="input resize-none"
+							rows={2}
+						/>
+					</div>
+				</div>
+
+				{/* HR Policy Defaults */}
+				<div>
+					<p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+						HR Policy Defaults
+					</p>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="form-label">Annual Leave Days</label>
+							<input
+								{...register("annual_leave_days")}
+								className="input"
+								type="number"
+								min={0}
+								placeholder="e.g. 21"
+							/>
+						</div>
+						<div>
+							<label className="form-label">Sick Leave Days</label>
+							<input
+								{...register("sick_leave_days")}
+								className="input"
+								type="number"
+								min={0}
+								placeholder="e.g. 14"
+							/>
+						</div>
+						<div>
+							<label className="form-label">Maternity Leave Days</label>
+							<input
+								{...register("maternity_leave_days")}
+								className="input"
+								type="number"
+								min={0}
+								placeholder="e.g. 90"
+							/>
+						</div>
+						<div>
+							<label className="form-label">Paternity Leave Days</label>
+							<input
+								{...register("paternity_leave_days")}
+								className="input"
+								type="number"
+								min={0}
+								placeholder="e.g. 14"
+							/>
+						</div>
+						<div>
+							<label className="form-label">Probation Period (weeks)</label>
+							<input
+								{...register("probation_weeks")}
+								className="input"
+								type="number"
+								min={0}
+								placeholder="e.g. 12"
+							/>
+						</div>
+						<div>
+							<label className="form-label">Notice Period (weeks)</label>
+							<input
+								{...register("notice_weeks")}
+								className="input"
+								type="number"
+								min={0}
+								placeholder="e.g. 4"
+							/>
+						</div>
+					</div>
+					<div className="mt-4">
+						<label className="form-label">Stipend Amount (KES)</label>
+						<input
+							{...register("default_stipend_amount")}
+							className="input"
+							type="number"
+							min={0}
+							placeholder="e.g. 15000"
+						/>
+					</div>
+				</div>
+
+				<div className="flex justify-end gap-3 pt-2 border-t border-surface-border">
+					<button
+						type="button"
+						onClick={onClose}
+						className="btn-secondary btn-sm">
+						Cancel
+					</button>
+					<button
+						type="submit"
+						disabled={mutation.isPending}
+						className="btn-primary btn-sm">
+						<Save size={13} /> {mutation.isPending ? "Saving…" : "Save Changes"}
+					</button>
+				</div>
+			</form>
+		</Modal>
+	);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MAIN PAGE
+// ══════════════════════════════════════════════════════════════════════════════
 export default function HRPage() {
 	const { user } = useAuthStore();
 	const qc = useQueryClient();
 	const [activeTab, setActiveTab] = useState<Tab>("overview");
 	const [search, setSearch] = useState("");
+	const [staffSearch, setStaffSearch] = useState("");
 
 	// Modal states
 	const [showOnboard, setShowOnboard] = useState(false);
+	const [showAddStaff, setShowAddStaff] = useState(false);
 	const [viewAttachee, setViewAttachee] = useState<any | null>(null);
+	const [reviewLeave, setReviewLeave] = useState<any | null>(null);
 	const [showNewEval, setShowNewEval] = useState(false);
 	const [showAddDept, setShowAddDept] = useState(false);
+	const [showAddBranch, setShowAddBranch] = useState(false);
+	const [showRecruitment, setShowRecruitment] = useState(false);
+	const [showGenCert, setShowGenCert] = useState(false);
+	const [showBulkImport, setShowBulkImport] = useState(false);
+	const [showOrgSettings, setShowOrgSettings] = useState(false);
+	const [violationFilter, setViolationFilter] = useState("all");
+	const [auditFilter, setAuditFilter] = useState("");
 
+	// ── Queries ──────────────────────────────────────────────────────────────
 	const { data: attacheesRaw } = useQuery({
 		queryKey: ["attachees"],
 		queryFn: () => usersApi.list({ role: "attachee" }).then((r) => r.data),
 		refetchInterval: 120000,
 	});
-
+	const { data: allStaffRaw } = useQuery({
+		queryKey: ["all-staff"],
+		queryFn: () => usersApi.list().then((r) => r.data),
+		enabled: activeTab === "staff" || activeTab === "overview",
+	});
 	const { data: leaveRaw } = useQuery({
 		queryKey: ["leave-requests"],
 		queryFn: () => attendanceApi.leaveRequests().then((r) => r.data),
 		refetchInterval: 60000,
 		enabled: activeTab === "leave",
 	});
-
 	const { data: evalsRaw } = useQuery({
 		queryKey: ["evaluations"],
 		queryFn: () => evaluationsApi.list().then((r) => r.data),
 		enabled: activeTab === "evaluations",
 	});
-
 	const { data: deptsRaw } = useQuery({
 		queryKey: ["departments"],
 		queryFn: () => hrApi.departments().then((r) => r.data),
-		// fetch when on departments tab OR when onboard modal is open (for dropdown)
-		enabled: activeTab === "departments" || showOnboard,
+		enabled:
+			activeTab === "departments" ||
+			showOnboard ||
+			showAddStaff ||
+			showRecruitment,
 	});
-
+	const { data: branchesRaw } = useQuery({
+		queryKey: ["branches"],
+		queryFn: () => hrApi.branches().then((r) => r.data),
+		enabled: activeTab === "branches" || showAddStaff,
+	});
+	const { data: recruitmentRaw } = useQuery({
+		queryKey: ["recruitment"],
+		queryFn: () => hrApi.attacheePrograms().then((r) => r.data),
+		enabled: activeTab === "recruitment",
+	});
 	const { data: userStats } = useQuery({
 		queryKey: ["user-stats"],
 		queryFn: () => usersApi.stats().then((r) => r.data),
 	});
+	const { data: stipendsRaw } = useQuery({
+		queryKey: ["stipends"],
+		queryFn: () => financeApi.stipends().then((r) => r.data),
+		enabled: activeTab === "stipends",
+	});
+	const { data: violationsRaw } = useQuery({
+		queryKey: ["attendance-violations"],
+		queryFn: () => attendanceApi.violations().then((r) => r.data),
+		enabled: activeTab === "violations",
+	});
+	const { data: certsRaw } = useQuery({
+		queryKey: ["certificates"],
+		queryFn: () => certificatesApi.list().then((r) => r.data),
+		enabled: activeTab === "certificates",
+	});
+	const { data: auditRaw, refetch: refetchAudit } = useQuery({
+		queryKey: ["audit-log"],
+		queryFn: () =>
+			usersApi
+				.auditLog({ search: auditFilter || undefined })
+				.then((r) => r.data),
+		enabled: activeTab === "audit",
+	});
+	const { data: orgRaw } = useQuery({
+		queryKey: ["organisation"],
+		queryFn: () => hrApi.organisation().then((r) => r.data),
+		enabled: activeTab === "settings" || showOrgSettings,
+	});
 
+	// ── Normalise ─────────────────────────────────────────────────────────────
 	const attachees = Array.isArray(attacheesRaw)
 		? attacheesRaw
 		: (attacheesRaw?.results ?? []);
+	const allStaff = Array.isArray(allStaffRaw)
+		? allStaffRaw
+		: (allStaffRaw?.results ?? []);
+	const nonAttacheeStaff = allStaff.filter((s: any) => s.role !== "attachee");
 	const leave = Array.isArray(leaveRaw) ? leaveRaw : (leaveRaw?.results ?? []);
 	const evals = Array.isArray(evalsRaw) ? evalsRaw : (evalsRaw?.results ?? []);
 	const depts = Array.isArray(deptsRaw) ? deptsRaw : (deptsRaw?.results ?? []);
-
-	const reviewLeaveMutation = useMutation({
-		mutationFn: ({ id, data }: any) => attendanceApi.reviewLeave(id, data),
-		onSuccess: () => {
-			qc.invalidateQueries({ queryKey: ["leave-requests"] });
-			toast.success("Leave request updated");
-		},
-		onError: () => toast.error("Update failed"),
-	});
+	const branches = Array.isArray(branchesRaw)
+		? branchesRaw
+		: (branchesRaw?.results ?? []);
+	const recruitment = Array.isArray(recruitmentRaw)
+		? recruitmentRaw
+		: (recruitmentRaw?.results ?? []);
+	const stipends = Array.isArray(stipendsRaw)
+		? stipendsRaw
+		: (stipendsRaw?.results ?? []);
+	const violations = Array.isArray(violationsRaw)
+		? violationsRaw
+		: (violationsRaw?.results ?? []);
+	const certs = Array.isArray(certsRaw) ? certsRaw : (certsRaw?.results ?? []);
+	const auditLogs = Array.isArray(auditRaw)
+		? auditRaw
+		: (auditRaw?.results ?? []);
 
 	const pendingLeave = leave.filter((l: any) => l.status === "pending");
 	const approvedLeave = leave.filter((l: any) => l.status === "approved");
@@ -662,19 +1929,64 @@ export default function HRPage() {
 			a.email?.toLowerCase().includes(search.toLowerCase()) ||
 			a.department_name?.toLowerCase().includes(search.toLowerCase()),
 	);
+	const filteredStaff = nonAttacheeStaff.filter(
+		(s: any) =>
+			!staffSearch ||
+			s.full_name?.toLowerCase().includes(staffSearch.toLowerCase()) ||
+			s.email?.toLowerCase().includes(staffSearch.toLowerCase()) ||
+			s.role?.toLowerCase().includes(staffSearch.toLowerCase()),
+	);
+	const filteredViolations = violations.filter(
+		(v: any) =>
+			violationFilter === "all" || v.violation_type === violationFilter,
+	);
+
+	// ── Leave review ──────────────────────────────────────────────────────────
+	const reviewLeaveMutation = useMutation({
+		mutationFn: ({ id, data }: any) => attendanceApi.reviewLeave(id, data),
+		onSuccess: () => {
+			qc.invalidateQueries({ queryKey: ["leave-requests"] });
+			toast.success("Leave request updated");
+			setReviewLeave(null);
+		},
+		onError: () => toast.error("Update failed"),
+	});
+
+	const handleLeaveReview = async (
+		id: string,
+		status: string,
+		comment: string,
+	) => {
+		reviewLeaveMutation.mutate({
+			id,
+			data: { status, ...(comment && { review_comment: comment }) },
+		});
+	};
 
 	return (
 		<div className="space-y-6 animate-fade-in">
 			{/* ── Modals ── */}
-			<OnboardModal
+			<OnboardAttacheeModal
 				open={showOnboard}
 				onClose={() => setShowOnboard(false)}
 				departments={depts}
 				organisationId={user?.organisation}
 			/>
+			<AddStaffModal
+				open={showAddStaff}
+				onClose={() => setShowAddStaff(false)}
+				departments={depts}
+				branches={branches}
+				organisationId={user?.organisation}
+			/>
 			<ViewAttacheeModal
 				attachee={viewAttachee}
 				onClose={() => setViewAttachee(null)}
+			/>
+			<LeaveReviewModal
+				req={reviewLeave}
+				onClose={() => setReviewLeave(null)}
+				onReview={handleLeaveReview}
 			/>
 			<NewEvaluationModal
 				open={showNewEval}
@@ -686,6 +1998,32 @@ export default function HRPage() {
 				onClose={() => setShowAddDept(false)}
 				organisationId={user?.organisation}
 			/>
+			<AddBranchModal
+				open={showAddBranch}
+				onClose={() => setShowAddBranch(false)}
+				organisationId={user?.organisation}
+			/>
+			<AddRecruitmentModal
+				open={showRecruitment}
+				onClose={() => setShowRecruitment(false)}
+				departments={depts}
+			/>
+			<GenerateCertModal
+				open={showGenCert}
+				onClose={() => setShowGenCert(false)}
+				attachees={attachees}
+			/>
+			<BulkImportModal
+				open={showBulkImport}
+				onClose={() => setShowBulkImport(false)}
+			/>
+			{orgRaw && (
+				<OrgSettingsModal
+					open={showOrgSettings}
+					onClose={() => setShowOrgSettings(false)}
+					org={orgRaw}
+				/>
+			)}
 
 			{/* ── Header ── */}
 			<div className="page-header">
@@ -694,34 +2032,55 @@ export default function HRPage() {
 						<Users size={22} className="text-nexus-400" /> HR Management
 					</h1>
 					<p className="page-subtitle">
-						Attachee management · leave requests · evaluations · departments
+						People · leave · departments · branches · recruitment · training ·
+						stipends · compliance
 					</p>
 				</div>
-				<button
-					className="btn-primary btn-sm"
-					onClick={() => setShowOnboard(true)}>
-					<UserPlus size={13} /> Onboard Attachee
-				</button>
+				<div className="flex gap-2 flex-wrap">
+					<button
+						className="btn-secondary btn-sm"
+						onClick={() => setShowBulkImport(true)}>
+						<Upload size={13} /> Bulk Import
+					</button>
+					<button
+						className="btn-secondary btn-sm"
+						onClick={() => setShowAddStaff(true)}>
+						<UserPlus size={13} /> Add Staff
+					</button>
+					<button
+						className="btn-primary btn-sm"
+						onClick={() => setShowOnboard(true)}>
+						<GraduationCap size={13} /> Onboard Attachee
+					</button>
+				</div>
 			</div>
 
 			{/* ── Tabs ── */}
-			<div className="flex gap-1 p-1 bg-surface-card border border-surface-border rounded-xl w-fit flex-wrap">
-				{TABS.map((tab) => (
+			<div className="flex gap-1 p-1 bg-surface-card border border-surface-border rounded-xl flex-wrap">
+				{TABS.map(({ key, label, icon: Icon }) => (
 					<button
-						key={tab}
-						onClick={() => setActiveTab(tab)}
+						key={key}
+						onClick={() => setActiveTab(key)}
 						className={clsx(
-							"px-4 py-2 rounded-lg text-sm font-medium capitalize transition-all",
-							activeTab === tab
+							"px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5",
+							activeTab === key
 								? "bg-nexus-600 text-white"
 								: "text-slate-400 hover:text-white",
 						)}>
-						{tab}
+						<Icon size={11} />
+						{label}
+						{key === "leave" && pendingLeave.length > 0 && (
+							<span className="ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500 text-black">
+								{pendingLeave.length}
+							</span>
+						)}
 					</button>
 				))}
 			</div>
 
-			{/* ── OVERVIEW ── */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* OVERVIEW */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{activeTab === "overview" && (
 				<div className="space-y-5">
 					<div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -758,7 +2117,38 @@ export default function HRPage() {
 							</div>
 						))}
 					</div>
-
+					<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+						{[
+							{
+								label: "New Evaluation",
+								icon: ClipboardList,
+								action: () => setShowNewEval(true),
+							},
+							{
+								label: "Add Department",
+								icon: Building2,
+								action: () => setShowAddDept(true),
+							},
+							{
+								label: "New Recruitment",
+								icon: UserPlus,
+								action: () => setShowRecruitment(true),
+							},
+							{
+								label: "Generate Certificate",
+								icon: Award,
+								action: () => setShowGenCert(true),
+							},
+						].map(({ label, icon: Icon, action }) => (
+							<button
+								key={label}
+								onClick={action}
+								className="card flex items-center gap-3 text-left hover:border-nexus-500/30 transition-all p-4">
+								<Icon size={16} className="text-nexus-400 shrink-0" />
+								<span className="text-sm font-medium text-white">{label}</span>
+							</button>
+						))}
+					</div>
 					{userStats?.by_role && (
 						<div className="card">
 							<h3 className="font-semibold text-white mb-4">Staff by Role</h3>
@@ -768,13 +2158,14 @@ export default function HRPage() {
 										key={role}
 										className="p-3 bg-surface rounded-xl border border-surface-border">
 										<div className="text-xl font-bold text-white">{count}</div>
-										<div className="text-xs text-slate-500 mt-0.5">{role}</div>
+										<div className="text-xs text-slate-500 mt-0.5 capitalize">
+											{role.replace(/_/g, " ")}
+										</div>
 									</div>
 								))}
 							</div>
 						</div>
 					)}
-
 					<div className="card">
 						<div className="flex items-center justify-between mb-4">
 							<h3 className="font-semibold text-white">Recent Attachees</h3>
@@ -840,7 +2231,7 @@ export default function HRPage() {
 								{attachees.length === 0 && (
 									<tr>
 										<td colSpan={4} className="text-center py-8 text-slate-500">
-											No attachees yet —{" "}
+											No attachees —{" "}
 											<button
 												onClick={() => setShowOnboard(true)}
 												className="text-nexus-400 hover:underline">
@@ -855,7 +2246,9 @@ export default function HRPage() {
 				</div>
 			)}
 
-			{/* ── ATTACHEES ── */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* ATTACHEES */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{activeTab === "attachees" && (
 				<div className="card">
 					<div className="flex items-center gap-3 mb-5">
@@ -884,6 +2277,7 @@ export default function HRPage() {
 										joined: a.date_joined
 											? format(parseISO(a.date_joined), "dd MMM yyyy")
 											: "",
+										institution: a.institution || "",
 									})),
 									"attachees.csv",
 								)
@@ -898,6 +2292,7 @@ export default function HRPage() {
 								<th>Email</th>
 								<th>Department</th>
 								<th>Branch</th>
+								<th>Institution</th>
 								<th>Status</th>
 								<th>Joined</th>
 								<th>Actions</th>
@@ -915,6 +2310,9 @@ export default function HRPage() {
 									</td>
 									<td className="text-slate-400 text-sm">
 										{a.branch_name || "—"}
+									</td>
+									<td className="text-slate-400 text-xs">
+										{a.institution || "—"}
 									</td>
 									<td>
 										<span
@@ -942,7 +2340,7 @@ export default function HRPage() {
 							))}
 							{filteredAttachees.length === 0 && (
 								<tr>
-									<td colSpan={7} className="text-center py-10 text-slate-500">
+									<td colSpan={8} className="text-center py-10 text-slate-500">
 										{search
 											? `No results for "${search}"`
 											: "No attachees found"}
@@ -954,7 +2352,126 @@ export default function HRPage() {
 				</div>
 			)}
 
-			{/* ── LEAVE REQUESTS ── */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* STAFF (non-attachee) */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{activeTab === "staff" && (
+				<div className="card">
+					<div className="flex items-center gap-3 mb-5">
+						<div className="relative flex-1">
+							<Search
+								size={13}
+								className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+							/>
+							<input
+								value={staffSearch}
+								onChange={(e) => setStaffSearch(e.target.value)}
+								placeholder="Search by name, email or role…"
+								className="input pl-8 py-2"
+							/>
+						</div>
+						<button
+							className="btn-secondary btn-sm"
+							onClick={() =>
+								exportToCSV(
+									filteredStaff.map((s: any) => ({
+										name: s.full_name,
+										email: s.email,
+										role: s.role_display || s.role,
+										department: s.department_name || "",
+										branch: s.branch_name || "",
+										status: s.is_active ? "Active" : "Inactive",
+									})),
+									"staff.csv",
+								)
+							}>
+							<Download size={13} /> Export
+						</button>
+						<button
+							className="btn-primary btn-sm"
+							onClick={() => setShowAddStaff(true)}>
+							<UserPlus size={13} /> Add Staff
+						</button>
+					</div>
+					<table className="data-table">
+						<thead>
+							<tr>
+								<th>Name</th>
+								<th>Email</th>
+								<th>Role</th>
+								<th>Department</th>
+								<th>Branch</th>
+								<th>Status</th>
+								<th>Joined</th>
+							</tr>
+						</thead>
+						<tbody>
+							{filteredStaff.map((s: any) => (
+								<tr key={s.id}>
+									<td>
+										<div className="flex items-center gap-2">
+											<div className="w-7 h-7 rounded-full bg-nexus-600/20 flex items-center justify-center text-xs font-bold text-nexus-400">
+												{s.full_name
+													?.split(" ")
+													.map((n: string) => n[0])
+													.join("")
+													.slice(0, 2)}
+											</div>
+											<div>
+												<div className="text-sm font-medium text-white">
+													{s.full_name}
+												</div>
+												<div className="text-xs text-slate-500">
+													{s.employee_id || ""}
+												</div>
+											</div>
+										</div>
+									</td>
+									<td className="text-slate-400 text-xs">{s.email}</td>
+									<td>
+										<span className="badge-blue text-[10px] capitalize">
+											{s.role_display || s.role?.replace(/_/g, " ") || "—"}
+										</span>
+									</td>
+									<td className="text-slate-400 text-sm">
+										{s.department_name || "—"}
+									</td>
+									<td className="text-slate-400 text-sm">
+										{s.branch_name || "—"}
+									</td>
+									<td>
+										<span
+											className={clsx(
+												"badge",
+												s.is_active ? "badge-green" : "badge-slate",
+											)}>
+											{s.is_active ? "Active" : "Inactive"}
+										</span>
+									</td>
+									<td className="text-slate-400 text-xs">
+										{s.date_joined
+											? format(parseISO(s.date_joined), "dd MMM yyyy")
+											: "—"}
+									</td>
+								</tr>
+							))}
+							{filteredStaff.length === 0 && (
+								<tr>
+									<td colSpan={7} className="text-center py-10 text-slate-500">
+										{staffSearch
+											? `No results for "${staffSearch}"`
+											: "No staff found"}
+									</td>
+								</tr>
+							)}
+						</tbody>
+					</table>
+				</div>
+			)}
+
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* LEAVE — with review eye button + reviewed-by details */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{activeTab === "leave" && (
 				<div className="space-y-4">
 					<div className="grid grid-cols-3 gap-4">
@@ -985,8 +2502,8 @@ export default function HRPage() {
 									<th>Type</th>
 									<th>Period</th>
 									<th>Days</th>
-									<th>Reason</th>
 									<th>Status</th>
+									<th>Reviewed By</th>
 									<th>Actions</th>
 								</tr>
 							</thead>
@@ -1003,11 +2520,11 @@ export default function HRPage() {
 									leave.map((req: any) => (
 										<tr key={req.id}>
 											<td className="font-medium text-white text-sm">
-												{req.user_name || "—"}
+												{req.user_name || req.user_full_name || "—"}
 											</td>
 											<td>
 												<span className="badge-slate text-[10px] capitalize">
-													{req.leave_type?.replace("_", " ")}
+													{req.leave_type?.replace(/_/g, " ")}
 												</span>
 											</td>
 											<td className="text-slate-400 text-xs">
@@ -1020,9 +2537,6 @@ export default function HRPage() {
 											<td className="text-white font-medium">
 												{req.days_requested}
 											</td>
-											<td className="text-slate-400 text-xs max-w-xs truncate">
-												{req.reason}
-											</td>
 											<td>
 												<span
 													className={clsx("badge text-[10px]", {
@@ -1034,9 +2548,25 @@ export default function HRPage() {
 													{req.status}
 												</span>
 											</td>
+											<td className="text-slate-400 text-xs">
+												{req.reviewed_by_name || req.approved_by_name ? (
+													<span className="text-white">
+														{req.reviewed_by_name || req.approved_by_name}
+													</span>
+												) : (
+													"—"
+												)}
+											</td>
 											<td>
+												{/* Eye always visible to see details + reviewed-by */}
+												<button
+													className="btn-ghost btn-sm p-1.5 mr-1"
+													title="View details"
+													onClick={() => setReviewLeave(req)}>
+													<Eye size={13} />
+												</button>
 												{req.status === "pending" && (
-													<div className="flex gap-1.5">
+													<>
 														<button
 															onClick={() =>
 																reviewLeaveMutation.mutate({
@@ -1045,7 +2575,7 @@ export default function HRPage() {
 																})
 															}
 															title="Approve"
-															className="btn-success btn-sm p-1.5">
+															className="btn-success btn-sm p-1.5 mr-1">
 															<CheckCircle size={12} />
 														</button>
 														<button
@@ -1059,7 +2589,7 @@ export default function HRPage() {
 															className="btn-danger btn-sm p-1.5">
 															<XCircle size={12} />
 														</button>
-													</div>
+													</>
 												)}
 											</td>
 										</tr>
@@ -1071,7 +2601,9 @@ export default function HRPage() {
 				</div>
 			)}
 
-			{/* ── EVALUATIONS ── */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* EVALUATIONS */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{activeTab === "evaluations" && (
 				<div className="card">
 					<div className="flex items-center justify-between mb-5">
@@ -1097,7 +2629,7 @@ export default function HRPage() {
 							{evals.length === 0 ? (
 								<tr>
 									<td colSpan={6} className="text-center py-10 text-slate-500">
-										No evaluations yet —{" "}
+										No evaluations —{" "}
 										<button
 											onClick={() => setShowNewEval(true)}
 											className="text-nexus-400 hover:underline">
@@ -1160,7 +2692,9 @@ export default function HRPage() {
 				</div>
 			)}
 
-			{/* ── DEPARTMENTS ── */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* DEPARTMENTS */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
 			{activeTab === "departments" && (
 				<div className="space-y-4">
 					<div className="flex justify-end">
@@ -1173,7 +2707,7 @@ export default function HRPage() {
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 						{depts.length === 0 ? (
 							<div className="col-span-3 card text-center py-12 text-slate-500">
-								No departments yet —{" "}
+								No departments —{" "}
 								<button
 									onClick={() => setShowAddDept(true)}
 									className="text-nexus-400 hover:underline">
@@ -1186,7 +2720,14 @@ export default function HRPage() {
 									key={d.id}
 									className="card hover:border-nexus-500/30 transition-all">
 									<div className="flex items-center justify-between mb-2">
-										<h3 className="font-semibold text-white">{d.name}</h3>
+										<div>
+											<h3 className="font-semibold text-white">{d.name}</h3>
+											{d.code && (
+												<span className="text-[10px] font-mono text-slate-500">
+													{d.code}
+												</span>
+											)}
+										</div>
 										<span
 											className={clsx(
 												"badge text-[10px]",
@@ -1210,6 +2751,747 @@ export default function HRPage() {
 							))
 						)}
 					</div>
+				</div>
+			)}
+
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* BRANCHES */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{activeTab === "branches" && (
+				<div className="space-y-4">
+					<div className="flex justify-end">
+						<button
+							className="btn-primary btn-sm"
+							onClick={() => setShowAddBranch(true)}>
+							<Plus size={13} /> Add Branch
+						</button>
+					</div>
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+						{branches.length === 0 ? (
+							<div className="col-span-3 card text-center py-12 text-slate-500">
+								No branches —{" "}
+								<button
+									onClick={() => setShowAddBranch(true)}
+									className="text-nexus-400 hover:underline">
+									add one
+								</button>
+							</div>
+						) : (
+							branches.map((b: any) => (
+								<div
+									key={b.id}
+									className="card hover:border-nexus-500/30 transition-all">
+									<div className="flex items-center justify-between mb-2">
+										<div>
+											<h3 className="font-semibold text-white">{b.name}</h3>
+											{b.code && (
+												<span className="text-[10px] font-mono text-slate-500">
+													{b.code}
+												</span>
+											)}
+										</div>
+										<span
+											className={clsx(
+												"badge text-[10px]",
+												b.is_active ? "badge-green" : "badge-slate",
+											)}>
+											{b.is_active ? "Active" : "Inactive"}
+										</span>
+									</div>
+									{b.location && (
+										<div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
+											<MapPin size={10} /> {b.location}
+										</div>
+									)}
+									{b.contact_phone && (
+										<div className="flex items-center gap-1.5 text-xs text-slate-400 mb-2">
+											<Phone size={10} /> {b.contact_phone}
+										</div>
+									)}
+									<div className="text-xs text-slate-500">
+										{b.department_count || 0} departments · {b.user_count || 0}{" "}
+										staff
+									</div>
+								</div>
+							))
+						)}
+					</div>
+				</div>
+			)}
+
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* RECRUITMENT */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{activeTab === "recruitment" && (
+				<div className="space-y-4">
+					<div className="flex items-center justify-between">
+						<h3 className="font-semibold text-white">
+							Internship & Attachee Programs
+						</h3>
+						<button
+							className="btn-primary btn-sm"
+							onClick={() => setShowRecruitment(true)}>
+							<Plus size={13} /> New Posting
+						</button>
+					</div>
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+						{recruitment.length === 0 ? (
+							<div className="col-span-3 card text-center py-12 text-slate-500">
+								No postings —{" "}
+								<button
+									onClick={() => setShowRecruitment(true)}
+									className="text-nexus-400 hover:underline">
+									create one
+								</button>
+							</div>
+						) : (
+							recruitment.map((r: any) => (
+								<div
+									key={r.id}
+									className="card hover:border-nexus-500/30 transition-all">
+									<div className="flex items-center justify-between mb-2">
+										<h3 className="font-semibold text-white text-sm">
+											{r.title || r.name || "Program"}
+										</h3>
+										<span
+											className={clsx(
+												"badge text-[10px]",
+												r.is_active ? "badge-green" : "badge-slate",
+											)}>
+											{r.is_active ? "Open" : "Closed"}
+										</span>
+									</div>
+									{r.department_name && (
+										<div className="text-xs text-slate-400 mb-1">
+											<Building2 size={10} className="inline mr-1" />
+											{r.department_name}
+										</div>
+									)}
+									{r.start_date && (
+										<div className="text-xs text-slate-500">
+											{format(parseISO(r.start_date), "dd MMM yyyy")} →{" "}
+											{r.end_date
+												? format(parseISO(r.end_date), "dd MMM yyyy")
+												: "Ongoing"}
+										</div>
+									)}
+									{r.slots && (
+										<div className="text-xs text-nexus-400 mt-2 font-medium">
+											{r.slots} slot{r.slots !== 1 ? "s" : ""}
+										</div>
+									)}
+									{r.description && (
+										<p className="text-xs text-slate-500 mt-2 line-clamp-2">
+											{r.description}
+										</p>
+									)}
+								</div>
+							))
+						)}
+					</div>
+				</div>
+			)}
+
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* TRAINING */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{activeTab === "training" && (
+				<div className="space-y-4">
+					<div className="card">
+						<div className="flex items-center justify-between mb-5">
+							<div>
+								<h3 className="font-semibold text-white">
+									Training & Development
+								</h3>
+								<p className="text-xs text-slate-500 mt-0.5">
+									Induction schedules, skills workshops, and compliance training
+								</p>
+							</div>
+						</div>
+						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+							{[
+								{
+									label: "Induction Sessions",
+									desc: "Onboarding orientation for new attachees",
+									icon: BookOpen,
+									color: "text-nexus-400",
+								},
+								{
+									label: "Skills Workshops",
+									desc: "Technical and soft-skills training programmes",
+									icon: TrendingUp,
+									color: "text-green-400",
+								},
+								{
+									label: "Compliance Training",
+									desc: "Mandatory HR, safety, and policy modules",
+									icon: Shield,
+									color: "text-amber-400",
+								},
+							].map(({ label, desc, icon: Icon, color }) => (
+								<div
+									key={label}
+									className="p-4 bg-surface rounded-xl border border-surface-border hover:border-nexus-500/30 transition-all cursor-pointer">
+									<Icon size={18} className={clsx(color, "mb-2")} />
+									<div className="text-sm font-semibold text-white mb-1">
+										{label}
+									</div>
+									<div className="text-xs text-slate-500">{desc}</div>
+								</div>
+							))}
+						</div>
+						<div className="p-4 border border-dashed border-surface-border rounded-xl text-center text-slate-500 text-sm">
+							Training module integration coming soon — connect your LMS or
+							upload training records manually.
+						</div>
+					</div>
+					<div className="card">
+						<h3 className="font-semibold text-white mb-4">
+							Pending Inductions
+						</h3>
+						<table className="data-table">
+							<thead>
+								<tr>
+									<th>Attachee</th>
+									<th>Department</th>
+									<th>Joined</th>
+									<th>Induction Status</th>
+								</tr>
+							</thead>
+							<tbody>
+								{activeAttachees.slice(0, 8).map((a: any) => (
+									<tr key={a.id}>
+										<td className="font-medium text-white text-sm">
+											{a.full_name}
+										</td>
+										<td className="text-slate-400 text-sm">
+											{a.department_name || "—"}
+										</td>
+										<td className="text-slate-400 text-xs">
+											{a.date_joined
+												? format(parseISO(a.date_joined), "dd MMM yyyy")
+												: "—"}
+										</td>
+										<td>
+											<span className="badge-amber text-[10px]">Pending</span>
+										</td>
+									</tr>
+								))}
+								{activeAttachees.length === 0 && (
+									<tr>
+										<td colSpan={4} className="text-center py-8 text-slate-500">
+											No active attachees
+										</td>
+									</tr>
+								)}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
+
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* STIPENDS */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{activeTab === "stipends" && (
+				<div className="space-y-4">
+					<div className="grid grid-cols-3 gap-4">
+						{[
+							{
+								label: "Total Processed",
+								value: stipends.filter((s: any) => s.status === "paid").length,
+								color: "text-green-400",
+							},
+							{
+								label: "Pending Approval",
+								value: stipends.filter((s: any) => s.status === "pending")
+									.length,
+								color: "text-amber-400",
+							},
+							{
+								label: "This Month",
+								value: stipends.filter((s: any) => {
+									try {
+										return (
+											new Date(s.payment_date).getMonth() ===
+											new Date().getMonth()
+										);
+									} catch {
+										return false;
+									}
+								}).length,
+								color: "text-nexus-400",
+							},
+						].map(({ label, value, color }) => (
+							<div key={label} className="stat-card text-center">
+								<div className={clsx("stat-value", color)}>{value}</div>
+								<div className="stat-label">{label}</div>
+							</div>
+						))}
+					</div>
+					<div className="card">
+						<div className="flex items-center justify-between mb-4">
+							<h3 className="font-semibold text-white">Stipend Records</h3>
+							<button
+								className="btn-secondary btn-sm"
+								onClick={() =>
+									exportToCSV(
+										stipends.map((s: any) => ({
+											recipient: s.user_name || s.recipient_name || "",
+											amount: s.amount,
+											status: s.status,
+											period: s.period || "",
+											payment_date: s.payment_date || "",
+										})),
+										"stipends.csv",
+									)
+								}>
+								<Download size={13} /> Export
+							</button>
+						</div>
+						<table className="data-table">
+							<thead>
+								<tr>
+									<th>Recipient</th>
+									<th>Amount</th>
+									<th>Period</th>
+									<th>Payment Date</th>
+									<th>Status</th>
+								</tr>
+							</thead>
+							<tbody>
+								{stipends.length === 0 ? (
+									<tr>
+										<td
+											colSpan={5}
+											className="text-center py-10 text-slate-500">
+											No stipend records found
+										</td>
+									</tr>
+								) : (
+									stipends.map((s: any) => (
+										<tr key={s.id}>
+											<td className="font-medium text-white text-sm">
+												{s.user_name || s.recipient_name || "—"}
+											</td>
+											<td className="text-white font-medium">
+												KES {Number(s.amount || 0).toLocaleString()}
+											</td>
+											<td className="text-slate-400 text-sm">
+												{s.period || "—"}
+											</td>
+											<td className="text-slate-400 text-xs">
+												{s.payment_date
+													? format(parseISO(s.payment_date), "dd MMM yyyy")
+													: "—"}
+											</td>
+											<td>
+												<span
+													className={clsx("badge text-[10px]", {
+														"badge-green": s.status === "paid",
+														"badge-amber": s.status === "pending",
+														"badge-red": s.status === "failed",
+													})}>
+													{s.status}
+												</span>
+											</td>
+										</tr>
+									))
+								)}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
+
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* VIOLATIONS */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{activeTab === "violations" && (
+				<div className="card">
+					<div className="flex items-center justify-between mb-4">
+						<h3 className="font-semibold text-white">Attendance Violations</h3>
+						<div className="flex items-center gap-2">
+							<Filter size={13} className="text-slate-400" />
+							<select
+								value={violationFilter}
+								onChange={(e) => setViolationFilter(e.target.value)}
+								className="input py-1.5 text-xs w-40">
+								<option value="all">All types</option>
+								<option value="late">Late arrival</option>
+								<option value="absent">Absent</option>
+								<option value="early_leave">Early leave</option>
+								<option value="no_checkout">No checkout</option>
+							</select>
+						</div>
+					</div>
+					<table className="data-table">
+						<thead>
+							<tr>
+								<th>Employee</th>
+								<th>Type</th>
+								<th>Date</th>
+								<th>Details</th>
+								<th>Severity</th>
+							</tr>
+						</thead>
+						<tbody>
+							{filteredViolations.length === 0 ? (
+								<tr>
+									<td colSpan={5} className="text-center py-10 text-slate-500">
+										No violations recorded
+									</td>
+								</tr>
+							) : (
+								filteredViolations.map((v: any) => (
+									<tr key={v.id}>
+										<td className="font-medium text-white text-sm">
+											{v.user_name || "—"}
+										</td>
+										<td>
+											<span className="badge-slate text-[10px] capitalize">
+												{v.violation_type?.replace(/_/g, " ") || "—"}
+											</span>
+										</td>
+										<td className="text-slate-400 text-xs">
+											{v.date ? format(parseISO(v.date), "dd MMM yyyy") : "—"}
+										</td>
+										<td className="text-slate-400 text-xs max-w-xs truncate">
+											{v.details || v.notes || "—"}
+										</td>
+										<td>
+											<span
+												className={clsx("badge text-[10px]", {
+													"badge-red": v.severity === "high",
+													"badge-amber": v.severity === "medium",
+													"badge-slate": !v.severity || v.severity === "low",
+												})}>
+												{v.severity || "low"}
+											</span>
+										</td>
+									</tr>
+								))
+							)}
+						</tbody>
+					</table>
+				</div>
+			)}
+
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* CERTIFICATES */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{activeTab === "certificates" && (
+				<div className="space-y-4">
+					<div className="flex items-center justify-between">
+						<h3 className="font-semibold text-white">Certificates Issued</h3>
+						<button
+							className="btn-primary btn-sm"
+							onClick={() => setShowGenCert(true)}>
+							<Award size={13} /> Generate Certificate
+						</button>
+					</div>
+					<div className="card">
+						<table className="data-table">
+							<thead>
+								<tr>
+									<th>Recipient</th>
+									<th>Type</th>
+									<th>Issued</th>
+									<th>Verify Code</th>
+									<th>Actions</th>
+								</tr>
+							</thead>
+							<tbody>
+								{certs.length === 0 ? (
+									<tr>
+										<td
+											colSpan={5}
+											className="text-center py-10 text-slate-500">
+											No certificates yet —{" "}
+											<button
+												onClick={() => setShowGenCert(true)}
+												className="text-nexus-400 hover:underline">
+												generate one
+											</button>
+										</td>
+									</tr>
+								) : (
+									certs.map((c: any) => (
+										<tr key={c.id}>
+											<td className="font-medium text-white text-sm">
+												{c.user_name || c.recipient_name || "—"}
+											</td>
+											<td>
+												<span className="badge-blue text-[10px]">
+													{CERT_TYPES.find(
+														(t) => t.value === c.certificate_type,
+													)?.label ||
+														c.certificate_type?.replace(/_/g, " ") ||
+														"Completion"}
+												</span>
+											</td>
+											<td className="text-slate-400 text-xs">
+												{c.issued_date
+													? format(parseISO(c.issued_date), "dd MMM yyyy")
+													: "—"}
+											</td>
+											<td className="font-mono text-xs text-slate-400">
+												{c.verify_code || "—"}
+											</td>
+											<td>
+												<button
+													className="btn-ghost btn-sm p-1.5"
+													title="Download"
+													onClick={() =>
+														certificatesApi.download(c.id).then((r: any) => {
+															const url = URL.createObjectURL(r.data);
+															const a = document.createElement("a");
+															a.href = url;
+															a.download = `certificate-${c.id}.pdf`;
+															a.click();
+															URL.revokeObjectURL(url);
+														})
+													}>
+													<Download size={13} />
+												</button>
+											</td>
+										</tr>
+									))
+								)}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
+
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* AUDIT LOG */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{activeTab === "audit" && (
+				<div className="card">
+					<div className="flex items-center justify-between mb-4">
+						<h3 className="font-semibold text-white">Audit Log</h3>
+						<div className="flex items-center gap-2">
+							<div className="relative">
+								<Search
+									size={13}
+									className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+								/>
+								<input
+									value={auditFilter}
+									onChange={(e) => setAuditFilter(e.target.value)}
+									onKeyDown={(e) => e.key === "Enter" && refetchAudit()}
+									placeholder="Search actions…"
+									className="input pl-8 py-1.5 text-xs w-48"
+								/>
+							</div>
+							<button
+								onClick={() => refetchAudit()}
+								className="btn-secondary btn-sm p-1.5"
+								title="Refresh">
+								<RefreshCw size={13} />
+							</button>
+							<button
+								onClick={() =>
+									exportToCSV(
+										auditLogs.map((l: any) => ({
+											user: l.user_email || l.user || "",
+											action: l.action || "",
+											resource: l.resource_type || "",
+											timestamp: l.timestamp || "",
+											ip: l.ip_address || "",
+										})),
+										"audit-log.csv",
+									)
+								}
+								className="btn-secondary btn-sm">
+								<Download size={13} /> Export
+							</button>
+						</div>
+					</div>
+					<table className="data-table">
+						<thead>
+							<tr>
+								<th>User</th>
+								<th>Action</th>
+								<th>Resource</th>
+								<th>Timestamp</th>
+								<th>IP</th>
+							</tr>
+						</thead>
+						<tbody>
+							{auditLogs.length === 0 ? (
+								<tr>
+									<td colSpan={5} className="text-center py-10 text-slate-500">
+										No audit records found
+									</td>
+								</tr>
+							) : (
+								auditLogs.map((log: any, i: number) => (
+									<tr key={log.id ?? i}>
+										<td className="text-sm text-white">
+											{log.user_email || log.user || "—"}
+										</td>
+										<td>
+											<span
+												className={clsx("badge text-[10px]", {
+													"badge-red": ["delete", "deactivate", "reject"].some(
+														(k) => log.action?.toLowerCase().includes(k),
+													),
+													"badge-green": ["create", "approve", "enable"].some(
+														(k) => log.action?.toLowerCase().includes(k),
+													),
+													"badge-blue": ["update", "edit", "patch"].some((k) =>
+														log.action?.toLowerCase().includes(k),
+													),
+													"badge-slate": true,
+												})}>
+												{log.action || "—"}
+											</span>
+										</td>
+										<td className="text-slate-400 text-xs capitalize">
+											{log.resource_type?.replace(/_/g, " ") ||
+												log.model ||
+												"—"}
+										</td>
+										<td className="text-slate-400 text-xs">
+											{log.timestamp
+												? format(parseISO(log.timestamp), "dd MMM yyyy HH:mm")
+												: "—"}
+										</td>
+										<td className="font-mono text-xs text-slate-500">
+											{log.ip_address || "—"}
+										</td>
+									</tr>
+								))
+							)}
+						</tbody>
+					</table>
+				</div>
+			)}
+
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{/* ORG SETTINGS — with HR Policy Defaults editable */}
+			{/* ═══════════════════════════════════════════════════════════════════ */}
+			{activeTab === "settings" && (
+				<div className="space-y-4">
+					{orgRaw ? (
+						<>
+							<div className="card">
+								<div className="flex items-center justify-between mb-5">
+									<h3 className="font-semibold text-white">
+										Organisation Details
+									</h3>
+									<button
+										className="btn-primary btn-sm"
+										onClick={() => setShowOrgSettings(true)}>
+										<Edit2 size={13} /> Edit Settings
+									</button>
+								</div>
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+									{[
+										{ label: "Name", value: orgRaw.name },
+										{ label: "Code", value: orgRaw.code || "—" },
+										{
+											label: "Contact Email",
+											value: orgRaw.contact_email || "—",
+										},
+										{
+											label: "Contact Phone",
+											value: orgRaw.contact_phone || "—",
+										},
+										{ label: "Address", value: orgRaw.address || "—" },
+										{ label: "Website", value: orgRaw.website || "—" },
+									].map(({ label, value }) => (
+										<div
+											key={label}
+											className="p-3 bg-surface rounded-xl border border-surface-border">
+											<div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
+												{label}
+											</div>
+											<div className="text-sm text-white font-medium">
+												{value}
+											</div>
+										</div>
+									))}
+								</div>
+								{orgRaw.mission && (
+									<div className="mt-4 p-3 bg-surface rounded-xl border border-surface-border">
+										<div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
+											Mission Statement
+										</div>
+										<p className="text-sm text-slate-300">{orgRaw.mission}</p>
+									</div>
+								)}
+							</div>
+
+							<div className="card">
+								<div className="flex items-center justify-between mb-4">
+									<h3 className="font-semibold text-white">
+										HR Policy Defaults
+									</h3>
+									<button
+										className="btn-secondary btn-sm"
+										onClick={() => setShowOrgSettings(true)}>
+										<Edit2 size={13} /> Edit Policies
+									</button>
+								</div>
+								<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+									{[
+										{
+											label: "Annual Leave Days",
+											value: orgRaw.annual_leave_days ?? "—",
+										},
+										{
+											label: "Sick Leave Days",
+											value: orgRaw.sick_leave_days ?? "—",
+										},
+										{
+											label: "Maternity Leave Days",
+											value: orgRaw.maternity_leave_days ?? "—",
+										},
+										{
+											label: "Paternity Leave Days",
+											value: orgRaw.paternity_leave_days ?? "—",
+										},
+										{
+											label: "Probation Period",
+											value: orgRaw.probation_weeks
+												? `${orgRaw.probation_weeks} wks`
+												: "—",
+										},
+										{
+											label: "Notice Period",
+											value: orgRaw.notice_weeks
+												? `${orgRaw.notice_weeks} wks`
+												: "—",
+										},
+										{
+											label: "Default Stipend",
+											value: orgRaw.default_stipend_amount
+												? `KES ${Number(orgRaw.default_stipend_amount).toLocaleString()}`
+												: "—",
+										},
+									].map(({ label, value }) => (
+										<div
+											key={label}
+											className="p-3 bg-surface rounded-xl border border-surface-border text-center">
+											<div className="text-lg font-bold text-white">
+												{value}
+											</div>
+											<div className="text-xs text-slate-500 mt-0.5">
+												{label}
+											</div>
+										</div>
+									))}
+								</div>
+							</div>
+						</>
+					) : (
+						<div className="card text-center py-12 text-slate-500">
+							Loading organisation settings…
+						</div>
+					)}
 				</div>
 			)}
 		</div>

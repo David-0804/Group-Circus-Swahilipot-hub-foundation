@@ -70,3 +70,15 @@ django-debug-toolbar
 python-decouple
 gunicorn
 python-dotenv
+
+# Data 
+pandas
+matplotlib
+seaborn
+numpy
+reportlab
+openpyxl
+xlsxwriter
+python-pptx
+
+openrouter
