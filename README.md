@@ -431,7 +431,7 @@ docker exec -it Nexus_backend python manage.py createsuperuser
 |5. Philip Kiema | Created the landing page |
 |6. Jebichii Mercy | UI/UX Designer |
  7. Hanura Hamisi| --- |system design
-| Team Member 8 | --- |
+| Daniel nyamiaka | Testing application and bug reporting |
 | Team Member 9 | --- |
 
 ---
