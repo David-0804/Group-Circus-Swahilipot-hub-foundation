@@ -424,7 +424,7 @@ docker exec -it Nexus_backend python manage.py createsuperuser
 
 | Name | Contribution |
 | ---- | ------------ |
-| Philip Kiema | Created te landing page |
+| Philip Kiema | Created the landing page |
 | Team Member 2 | --- |
 | Team Member 3 | --- |
 | Team Member 4 | --- |
