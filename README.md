@@ -424,7 +424,7 @@ docker exec -it Nexus_backend python manage.py createsuperuser
 
 | Name | Contribution |
 | ---- | ------------ |
-| Team Member 1 | --- |
+|1. David Ochieng | Backend Integration |
 | Team Member 2 | --- |
 | Team Member 3 | --- |
 | Team Member 4 | --- |
