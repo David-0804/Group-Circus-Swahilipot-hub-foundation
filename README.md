@@ -430,7 +430,7 @@ docker exec -it Nexus_backend python manage.py createsuperuser
 |4. Victor Mutua | Data Analyst and Documentation |
 |5. Philip Kiema | Created the landing page |
 |6. Jebichii Mercy | UI/UX Designer |
-| Team Member 7 | --- |
+ 7. Hanura Hamisi| --- |system design
 | Team Member 8 | --- |
 | Team Member 9 | --- |
 
