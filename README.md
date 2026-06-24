@@ -427,7 +427,7 @@ docker exec -it Nexus_backend python manage.py createsuperuser
 |1. David Ochieng | Backend Integration |
 |2. Collins Kaveva| Full project documentation and Security |
 |3. Levy Baraka | system structure |
-| Team Member 4 | --- |
+|4. Victor Mutua | Data Analyst and Documentation |
 | Team Member 5 | --- |
 | Team Member 6 | --- |
 | Team Member 7 | --- |
