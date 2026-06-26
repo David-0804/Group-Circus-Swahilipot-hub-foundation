@@ -5,6 +5,93 @@
 **Scale:** Designed for 100,000+ concurrent users
 
 ---
+---
+
+# 📸 Project Preview
+
+> **Note**
+>
+> The application is currently **not publicly deployed**. To provide an overview of the system, the screenshots below demonstrate the major interfaces and core modules available within the platform.
+
+---
+
+## 🏠 Landing Page
+
+The landing page introduces the Swahilipot Management System and provides users with quick access to authentication, system information, and available services.
+
+
+<img width="1600" height="900" alt="WhatsApp Image 2026-06-26 at 12 04 51 PM (2)" src="https://github.com/user-attachments/assets/ef574c43-df88-4d9b-afe6-9b5dc0aafda6" />
+
+
+---
+
+## 🔐 Two-Factor Authentication (2FA)
+
+Security is a core part of the platform. After entering valid credentials, users complete a second authentication step to ensure secure account access.
+
+
+<img width="1600" height="900" alt="WhatsApp Image 2026-06-26 at 12 04 51 PM (1)" src="https://github.com/user-attachments/assets/32290ed2-3594-465d-b0f4-78a4e9df6fac" />
+
+
+---
+
+## 📊 Admin Dashboard
+
+The centralized administrator dashboard provides a high-level overview of the entire system, including operational statistics, quick actions, notifications, and navigation to every management module.
+
+
+<img width="1600" height="900" alt="WhatsApp Image 2026-06-26 at 12 04 51 PM" src="https://github.com/user-attachments/assets/e34532b1-0896-4ad7-aeec-93fc02419e34" />
+
+
+
+---
+
+## 📈 Analytics Dashboard
+
+The analytics module monitors system activity and API usage in real time. It provides visual insights into request trends, activity timelines, and overall system performance to assist administrators in monitoring application health.
+
+
+<img width="1600" height="900" alt="WhatsApp Image 2026-06-26 at 12 04 50 PM (2)" src="https://github.com/user-attachments/assets/df3fa178-7c16-46c9-94f6-947b3d7a520e" />
+
+
+
+---
+
+## 👥 Human Resource (HR) Management
+
+The HR module enables administrators to manage staff records, departments, employee information, and organizational personnel from a centralized interface.
+
+
+<img width="1600" height="900" alt="WhatsApp Image 2026-06-26 at 12 04 50 PM (1)" src="https://github.com/user-attachments/assets/fae2ba96-be9d-4dc8-a156-af79e17d192f" />
+
+
+---
+
+## 💰 Finance Management
+
+The finance module tracks organizational finances, budgets, expenditures, invoices, and other financial records, allowing administrators to manage financial operations efficiently.
+
+
+<img width="1600" height="900" alt="WhatsApp Image 2026-06-26 at 12 04 50 PM" src="https://github.com/user-attachments/assets/21d4c35a-fc14-472d-bd11-fae2fcbd9666" />
+
+
+---
+
+## 👤 User Profile & Account Settings
+
+Every authenticated user has access to a personal profile page where they can update account information, manage profile details, and maintain their personal settings securely.
+
+
+
+<img width="1600" height="900" alt="WhatsApp Image 2026-06-26 at 12 04 51 PM (3)" src="https://github.com/user-attachments/assets/8a32460a-8f4f-44ef-83e7-51b09e54a3f4" />
+
+
+---
+
+Continue with the remaining documentation below.
+
+## System Coverage
+
 
 ## System Coverage
 
